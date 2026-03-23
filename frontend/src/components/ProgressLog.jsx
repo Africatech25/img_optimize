@@ -79,42 +79,42 @@ function LogEntry({ entry, onDownload }) {
     )
   }
 
-  if (entry.type === 'image_processed' && entry.success) {
-    return (
-      <div className="flex items-start gap-3 p-3 bg-green-500/5 border border-green-500/20 rounded-xl animate-fade-in group">
-        <CheckCircle className="w-5 h-5 text-green-400 flex-shrink-0 mt-0.5" />
-        <div className="flex-1 min-w-0">
-          <p className="text-sm text-slate-300 truncate">
-            <span className="font-medium">{entry.original_name}</span> → {entry.optimized_name}
-          </p>
-          <div className="flex items-center gap-4 mt-1 text-xs text-slate-500">
-            <span>{entry.before_formatted} → {entry.after_formatted}</span>
-            <span className="text-green-400 font-medium">-{entry.gain_percent}%</span>
+  if (entry.type === 'image_processed') {
+    if (entry.success) {
+      return (
+        <div className="flex items-start gap-3 p-3 bg-green-500/5 border border-green-500/20 rounded-xl animate-fade-in group">
+          <CheckCircle className="w-5 h-5 text-green-400 flex-shrink-0 mt-0.5" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm text-slate-300 truncate">
+              <span className="font-medium">{entry.original_name}</span> → {entry.optimized_name}
+            </p>
+            <div className="flex items-center gap-4 mt-1 text-xs text-slate-500">
+              <span>{entry.before_formatted} → {entry.after_formatted}</span>
+              <span className="text-green-400 font-medium">-{entry.gain_percent}%</span>
+            </div>
+          </div>
+          <button
+            onClick={() => onDownload(entry.optimized_name)}
+            className="flex-shrink-0 p-2 rounded-lg bg-slate-800/50 hover:bg-slate-700 border border-slate-700 hover:border-violet-500/50 transition-all opacity-0 group-hover:opacity-100"
+            title="Télécharger cette image"
+          >
+            <Download className="w-4 h-4 text-violet-400" />
+          </button>
+        </div>
+      )
+    } else {
+      return (
+        <div className="flex items-start gap-3 p-3 bg-red-500/5 border border-red-500/20 rounded-xl animate-fade-in">
+          <XCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm text-slate-300 truncate">
+              <span className="font-medium">{entry.original_name}</span>
+            </p>
+            <p className="text-xs text-red-400 mt-1">{entry.error || 'Erreur lors du traitement'}</p>
           </div>
         </div>
-        <button
-          onClick={() => onDownload(entry.optimized_name)}
-          className="flex-shrink-0 p-2 rounded-lg bg-slate-800/50 hover:bg-slate-700 border border-slate-700 hover:border-violet-500/50 transition-all opacity-0 group-hover:opacity-100"
-          title="Télécharger cette image"
-        >
-          <Download className="w-4 h-4 text-violet-400" />
-        </button>
-      </div>
-    )
-  }
-
-  if (entry.type === 'image_error' || !entry.success) {
-    return (
-      <div className="flex items-start gap-3 p-3 bg-red-500/5 border border-red-500/20 rounded-xl animate-fade-in">
-        <XCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
-        <div className="flex-1 min-w-0">
-          <p className="text-sm text-slate-300 truncate">
-            <span className="font-medium">{entry.original_name}</span>
-          </p>
-          <p className="text-xs text-red-400 mt-1">{entry.error || 'Erreur inconnue'}</p>
-        </div>
-      </div>
-    )
+      )
+    }
   }
 
   if (entry.type === 'completed') {
@@ -124,6 +124,20 @@ function LogEntry({ entry, onDownload }) {
         <div className="flex-1 min-w-0">
           <p className="text-sm text-white font-medium">{entry.message}</p>
           <p className="text-xs text-slate-500">{new Date(entry.timestamp).toLocaleTimeString()}</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (entry.type === 'image_error') {
+    return (
+      <div className="flex items-start gap-3 p-3 bg-red-500/5 border border-red-500/20 rounded-xl animate-fade-in">
+        <XCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+        <div className="flex-1 min-w-0">
+          <p className="text-sm text-slate-300 truncate">
+            {entry.original_name && <span className="font-medium">{entry.original_name}</span>}
+          </p>
+          <p className="text-xs text-red-400 mt-1">{entry.error || 'Erreur inconnue'}</p>
         </div>
       </div>
     )
