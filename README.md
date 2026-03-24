@@ -6,11 +6,12 @@
 
 ## 📖 Sommaire
 1. [Utilisation (Pour tous)](#-utilisation-pour-tous)
-2. [Architecture Technique](#-architecture-technique)
-3. [Installation Locale (Développeurs)](#-installation-locale-développeurs)
-4. [API & Endpoints](#-api--endpoints)
-5. [Déploiement](#-déploiement)
-6. [Sécurité & Confidentialité](#-sécurité--confidentialité)
+2. [Formats de Sortie supportés](#-formats-de-sortie-supportés)
+3. [Architecture Technique](#-architecture-technique)
+4. [Installation Locale (Développeurs)](#-installation-locale-développeurs)
+5. [API & Endpoints](#-api--endpoints)
+6. [Déploiement](#-déploiement)
+7. [Sécurité & Confidentialité](#-sécurité--confidentialité)
 
 ---
 
@@ -18,11 +19,27 @@
 
 L'utilisation est simple et intuitive :
 1.  **Glissez-déposez** vos images (JPG, PNG) dans la zone centrale.
-2.  **Choisissez le format** souhaité (WebP, JPG, PNG ou AVIF si disponible).
+2.  **Choisissez le format** souhaité parmi les options disponibles.
 3.  **Ajustez la qualité** (70-80% est recommandé pour un équilibre parfait).
 4.  **Renommez vos fichiers** (Optionnel) : Utile pour le SEO (ex: `produit-ete-`).
 5.  **Lancez l'optimisation**.
 6.  **Téléchargez** le fichier ZIP contenant tous vos assets optimisés.
+
+---
+
+## 🖼 Formats de Sortie supportés
+
+ImgOpt vous permet de convertir vos images vers les standards les plus récents :
+
+| Format | Avantages | Recommandation |
+| :--- | :--- | :--- |
+| **WebP** | Excellent rapport qualité/poids, supporté par 96%+ des navigateurs. | **Choix par défaut** pour le web moderne. |
+| **AVIF** | Compression supérieure au WebP (jusqu'à 30% de gain en plus). | Pour un maximum de performance (si activé sur le serveur). |
+| **JPEG** | Compatibilité universelle absolue. | Pour les impressions ou les vieux systèmes. |
+| **PNG** | Supporte la transparence sans perte. | Pour les logos et graphiques avec fond transparent. |
+
+> [!NOTE]
+> Tous les fichiers optimisés sont regroupés dans une **archive ZIP** unique afin de faciliter le téléchargement et l'organisation de vos projets.
 
 ---
 
