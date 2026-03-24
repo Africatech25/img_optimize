@@ -127,25 +127,49 @@ def convert_image(
 
         # PNG : on garde le mode original, aucune conversion nécessaire
 
+        # --- PRÉ-DIMENSIONNEMENT INTELLIGENT (OPTIMISATION) ---
+        # Si une limite de taille est active, estimer les dimensions optimales AVANT la boucle
+        # Cela évite de multiples encodages coûteux (surtout pour AVIF)
+        img_to_process = img
+        pre_scaled = False
+
+        if max_size_bytes > 0 and original_size > max_size_bytes:
+            # Estimation des dimensions cibles
+            target_width, target_height = estimate_target_dimensions(
+                img.width,
+                img.height,
+                original_size,
+                max_size_bytes,
+                fmt
+            )
+
+            # Si réduction nécessaire (> 5%), pré-dimensionner
+            if target_width < img.width * 0.95:
+                img_to_process = img.resize(
+                    (target_width, target_height),
+                    Image.Resampling.LANCZOS
+                )
+                pre_scaled = True
+
         # --- Compression avec limite de taille si active ---
         final_quality = quality
         scale_factor = 1.0
         status = "ok"
 
         if max_size_bytes > 0:
-            # Boucle d'optimisation
+            # Boucle d'optimisation (réduite car pré-dimensionnement fait le gros du travail)
             attempts = 0
-            max_attempts = 12  # Réduit de 20 à 12
+            max_attempts = 6  # Réduit de 12 à 6 grâce au pré-dimensionnement
 
             while attempts < max_attempts:
                 # Sauvegarder avec qualité/dimensions actuelles
                 if scale_factor < 1.0:
-                    # Redimensionner l'image
-                    new_width = int(img.width * scale_factor)
-                    new_height = int(img.height * scale_factor)
-                    img_to_save = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
+                    # Redimensionnement additionnel si nécessaire (rare avec pré-dimensionnement)
+                    new_width = int(img_to_process.width * scale_factor)
+                    new_height = int(img_to_process.height * scale_factor)
+                    img_to_save = img_to_process.resize((new_width, new_height), Image.Resampling.LANCZOS)
                 else:
-                    img_to_save = img
+                    img_to_save = img_to_process
 
                 # Sauvegarder temporairement pour vérifier la taille
                 save_kwargs = dict(config["save_kwargs"])
@@ -159,18 +183,18 @@ def convert_image(
 
                 # Vérifier si on est sous la limite
                 if final_size <= max_size_bytes:
-                    if attempts > 0:
+                    if attempts > 0 or pre_scaled:
                         status = "reduced"
                     break
 
                 attempts += 1
 
-                # Stratégie 1 : Réduire la qualité par paliers de 10 (min 30) au lieu de 5
+                # Stratégie 1 : Réduire la qualité par paliers de 15 (min 30) - plus agressif
                 if final_quality > 30:
-                    final_quality = max(30, final_quality - 10)
-                # Stratégie 2 : Réduire les dimensions par paliers de 15% (au lieu de 10%)
+                    final_quality = max(30, final_quality - 15)
+                # Stratégie 2 : Réduire les dimensions par paliers de 20% - plus agressif
                 else:
-                    scale_factor = max(0.3, scale_factor - 0.15)
+                    scale_factor = max(0.3, scale_factor - 0.20)
 
         else:
             # Pas de limite de taille, simple sauvegarde
@@ -180,7 +204,7 @@ def convert_image(
             else:
                 save_kwargs["quality"] = quality
 
-            img.save(output_path_str, format=config["pil_format"], **save_kwargs)
+            img_to_process.save(output_path_str, format=config["pil_format"], **save_kwargs)
 
     final_size = Path(output_path_str).stat().st_size
 
@@ -206,6 +230,67 @@ def check_avif_support() -> bool:
     except ImportError:
         pass
     return "avif" in [f.lower() for f in Image.registered_extensions().values()]
+
+
+def estimate_target_dimensions(
+    img_width: int,
+    img_height: int,
+    original_size_bytes: int,
+    target_size_bytes: int,
+    fmt: str
+) -> tuple[int, int]:
+    """
+    Estime les dimensions optimales pour atteindre une taille cible.
+
+    Utilise une heuristique basée sur la relation non-linéaire entre
+    le nombre de pixels et la taille du fichier compressé.
+
+    Args:
+        img_width: Largeur originale
+        img_height: Hauteur originale
+        original_size_bytes: Taille du fichier original
+        target_size_bytes: Taille cible
+        fmt: Format de sortie (jpeg, webp, avif, png)
+
+    Returns:
+        (new_width, new_height) dimensions optimales estimées
+    """
+    # Si déjà sous la cible, pas besoin de réduire
+    if original_size_bytes <= target_size_bytes:
+        return img_width, img_height
+
+    # Ratio de compression nécessaire
+    ratio = target_size_bytes / original_size_bytes
+
+    # Exposant basé sur le format (compression plus efficace = exposant plus élevé)
+    # AVIF/WebP compressent mieux → besoin de moins réduire les dimensions
+    # JPEG/PNG compressent moins → besoin de plus réduire les dimensions
+    exponent_map = {
+        "avif": 0.65,  # Très efficace, réduction modérée
+        "webp": 0.68,  # Efficace, réduction modérée
+        "jpeg": 0.72,  # Standard, réduction standard
+        "png": 0.75,   # Moins efficace, réduction plus importante
+    }
+    exponent = exponent_map.get(fmt, 0.7)
+
+    # Calculer le facteur de réduction des dimensions
+    # Formule: taille_fichier ≈ (pixels)^exponent
+    scale = ratio ** (1 / exponent)
+
+    # Limiter entre 30% et 100% (sécurité)
+    scale = max(0.3, min(1.0, scale))
+
+    # Calculer nouvelles dimensions
+    new_width = int(img_width * scale)
+    new_height = int(img_height * scale)
+
+    # S'assurer que les dimensions sont au moins 100px
+    if new_width < 100 or new_height < 100:
+        scale_min = max(100 / img_width, 100 / img_height)
+        new_width = max(100, int(img_width * scale_min))
+        new_height = max(100, int(img_height * scale_min))
+
+    return new_width, new_height
 
 
 def main():
