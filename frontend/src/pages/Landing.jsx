@@ -208,33 +208,33 @@ export default function Landing() {
               </div>
 
               {/* Overlapping Stats Card */}
-              <div className="absolute -bottom-6 -left-12 w-56 glass-card rounded-[2rem] border border-white/10 p-6 shadow-2xl backdrop-blur-2xl bg-black/60 translate-y-4 animate-float-delayed">
+              <div className="absolute -bottom-6 left-0 lg:-left-12 w-48 sm:w-56 glass-card rounded-[2rem] border border-white/10 p-4 sm:p-6 shadow-2xl backdrop-blur-2xl bg-black/60 translate-y-4 animate-float-delayed">
                 <div className="flex flex-col items-center">
-                   <div className="relative w-28 h-28 mb-4">
+                   <div className="relative w-20 h-20 sm:w-28 sm:h-28 mb-4">
                       <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
                          <circle cx="18" cy="18" r="16" fill="none" className="stroke-white/5" strokeWidth="3"></circle>
                          <circle cx="18" cy="18" r="16" fill="none" className="stroke-cyan-500" strokeWidth="3" strokeDasharray="85, 100" strokeLinecap="round"></circle>
                       </svg>
                       <div className="absolute inset-0 flex flex-col items-center justify-center">
-                        <span className="text-white font-bold text-2xl leading-none">85%</span>
-                        <span className="text-[8px] text-cyan-400 font-bold uppercase tracking-widest mt-1">Score</span>
+                        <span className="text-white font-bold text-xl sm:text-2xl leading-none">85%</span>
+                        <span className="text-[7px] sm:text-[8px] text-cyan-400 font-bold uppercase tracking-widest mt-1">Score</span>
                       </div>
                    </div>
                    <div className="flex items-center gap-2">
-                      <i className="fa-solid fa-arrow-trend-up text-green-400 text-xs"></i>
-                      <p className="text-[10px] text-slate-300 font-semibold uppercase tracking-widest">Optimisation SEO</p>
+                      <i className="fa-solid fa-arrow-trend-up text-green-400 text-[10px] sm:text-xs"></i>
+                      <p className="text-[8px] sm:text-[10px] text-slate-300 font-semibold uppercase tracking-widest">Optimisation SEO</p>
                    </div>
                 </div>
               </div>
 
               {/* Floating Speed Badge */}
-              <div className="absolute top-2 -right-8 glass-card border border-white/10 px-4 py-3 rounded-2xl shadow-xl animate-float backdrop-blur-xl bg-violet-600/10 flex items-center gap-3">
-                 <div className="w-8 h-8 rounded-lg bg-violet-500/20 flex items-center justify-center">
-                    <i className="fa-solid fa-gauge-high text-violet-400"></i>
+              <div className="absolute top-2 right-0 lg:-right-8 glass-card border border-white/10 px-3 py-2 sm:px-4 sm:py-3 rounded-2xl shadow-xl animate-float backdrop-blur-xl bg-violet-600/10 flex items-center gap-2 sm:gap-3">
+                 <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-lg bg-violet-500/20 flex items-center justify-center">
+                    <i className="fa-solid fa-gauge-high text-violet-400 text-xs sm:text-base"></i>
                  </div>
                  <div>
-                    <p className="text-white font-bold text-xs">Vitesse LCP</p>
-                    <p className="text-violet-400 text-[10px] font-bold">x4 plus fluide</p>
+                    <p className="text-white font-bold text-[10px] sm:text-xs">Vitesse LCP</p>
+                    <p className="text-violet-400 text-[8px] sm:text-[10px] font-bold">x4 plus fluide</p>
                  </div>
               </div>
             </div>
