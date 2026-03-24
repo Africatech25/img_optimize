@@ -4,6 +4,8 @@ import Landing from './pages/Landing'
 import Optimizer from './pages/Optimizer'
 import Security from './pages/Security'
 
+import { Analytics } from '@vercel/analytics/react'
+
 function App() {
   return (
     <BrowserRouter>
@@ -13,6 +15,7 @@ function App() {
         <Route path="/app" element={<Optimizer />} />
         <Route path="/security" element={<Security />} />
       </Routes>
+      <Analytics />
     </BrowserRouter>
   )
 }

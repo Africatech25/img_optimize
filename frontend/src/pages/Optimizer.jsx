@@ -7,6 +7,8 @@ import ImageGrid from '../components/ImageGrid'
 import ProgressLog from '../components/ProgressLog'
 import ResultCard from '../components/ResultCard'
 
+import { track } from '@vercel/analytics'
+
 export default function Optimizer() {
   const API_BASE = import.meta.env.VITE_API_URL || '';
   const [files, setFiles] = useState([])
@@ -88,6 +90,14 @@ export default function Optimizer() {
 
         if (message.type === 'done') {
           eventSource.close()
+          
+          // Traquer l'événement de succès
+          track('images_optimized', { 
+            count: files.length, 
+            format: format,
+            quality: quality 
+          })
+
           // Récupérer les stats finales
           fetch(`${API_BASE}/api/job/${data.job_id}`)
             .then(res => res.json())
