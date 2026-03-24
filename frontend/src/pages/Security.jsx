@@ -28,12 +28,13 @@ export default function Security() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-20">
           <div className="glass-card gradient-border p-8 rounded-[2.5rem]">
             <div className="w-12 h-12 glass-card rounded-2xl flex items-center justify-center mb-6">
-              <i className="fa-solid fa-microchip text-xl text-violet-400"></i>
+              <i className="fa-solid fa-user-secret text-xl text-violet-400"></i>
             </div>
-            <h3 className="text-2xl font-bold text-white mb-4">Traitement 100% Local</h3>
+            <h3 className="text-2xl font-bold text-white mb-4">Traitement Éphémère</h3>
             <p className="text-slate-400 leading-relaxed font-light">
-              Contrairement aux autres outils, vos images ne sont <strong>jamais</strong> envoyées sur un serveur. 
-              Tout le traitement s'effectue directement dans <strong>votre navigateur</strong> grâce à la puissance du WebAssembly.
+              Vos images transitent par un tunnel <strong>HTTPS ultra-sécurisé</strong> vers notre instance privée. 
+              Le traitement s'effectue exclusivement en <strong>mémoire vive (RAM)</strong> et les fichiers sont supprimés 
+              instantanément après votre téléchargement.
             </p>
           </div>
 
@@ -41,10 +42,10 @@ export default function Security() {
             <div className="w-12 h-12 glass-card rounded-2xl flex items-center justify-center mb-6">
               <i className="fa-solid fa-shield-halved text-xl text-cyan-400"></i>
             </div>
-            <h3 className="text-2xl font-bold text-white mb-4">Zéro Serveur</h3>
+            <h3 className="text-2xl font-bold text-white mb-4">Zéro Stockage</h3>
             <p className="text-slate-400 leading-relaxed font-light">
-              Puisque aucune donnée n'est transmise, il n'y a aucun risque de fuite de données ou d'interception. 
-              Même si vous débranchez votre connexion internet, l'outil continue de fonctionner.
+              Nous n'avons <strong>aucune base de données</strong> d'images. Contrairement aux services cloud classiques, 
+              nous ne conservons aucune copie de vos assets. Ce qui entre sort optimisé, puis disparaît à jamais de nos serveurs.
             </p>
           </div>
 
@@ -53,10 +54,11 @@ export default function Security() {
               <i className="fa-solid fa-eye-slash text-4xl text-pink-500"></i>
             </div>
             <div>
-              <h3 className="text-2xl font-bold text-white mb-2">Pas de Cookies, Pas de Tracking</h3>
+              <h3 className="text-2xl font-bold text-white mb-2">Anonymat Total</h3>
               <p className="text-slate-400 font-light text-lg">
-                Nous ne stockons aucune information vous concernant. Pas d'historique de fichiers, pas de tracking publicitaire. 
-                Une expérience purement technique et privée.
+                Pas de compte, pas d'email, pas de cookies publicitaires. Nous utilisons <strong>Vercel Analytics</strong> pour 
+                suivre le volume d'utilisation de manière 100% anonyme et sans traçage individuel. 
+                Votre identité reste votre propriété exclusive.
               </p>
             </div>
           </div>
@@ -67,19 +69,20 @@ export default function Security() {
           <h2 className="text-3xl font-bold text-white mb-8 border-b border-white/5 pb-4">La Tech derrière ImgOpt</h2>
           <div className="space-y-6 text-slate-400">
             <p className="leading-relaxed">
-              Nous utilisons des bibliothèques de compression de pointe compilées en <strong>WebAssembly (WASM)</strong>. 
-              C'est une technologie qui permet d'exécuter du code performant (initialement écrit en C++ ou Rust) directement à l'intérieur du navigateur web.
+              Nous exploitons la puissance de <strong>FastAPI</strong> et de bibliothèques de traitement d'image de pointe (Pillow) 
+              sur une architecture cloud isolée. Chaque "job" d'optimisation est traité dans un environnement éphémère.
             </p>
             <p className="leading-relaxed">
-              Cela signifie que vous bénéficiez de la puissance d'un logiciel de bureau (comme Photoshop) combinée à la simplicité d'une interface web, sans les compromis de sécurité habituels liés au Cloud.
+              Cette approche nous permet de supporter des formats de nouvelle génération comme le <strong>WebP</strong> et l'<strong>AVIF</strong> 
+              avec une rapidité exceptionnelle, tout en garantissant une isolation complète de vos données durant les quelques secondes que dure le traitement.
             </p>
           </div>
           
           <div className="mt-12 pt-8 border-t border-white/5 flex flex-wrap gap-4">
-            <span className="px-4 py-2 glass-card text-xs font-bold text-slate-300 rounded-lg">WASM</span>
-            <span className="px-4 py-2 glass-card text-xs font-bold text-slate-300 rounded-lg">LOCAL-FIRST</span>
+            <span className="px-4 py-2 glass-card text-xs font-bold text-slate-300 rounded-lg">HTTPS-ONLY</span>
+            <span className="px-4 py-2 glass-card text-xs font-bold text-slate-300 rounded-lg">RAM-CORE</span>
             <span className="px-4 py-2 glass-card text-xs font-bold text-slate-300 rounded-lg">GDPR-READY</span>
-            <span className="px-4 py-2 glass-card text-xs font-bold text-slate-300 rounded-lg">ZERO-DATA</span>
+            <span className="px-4 py-2 glass-card text-xs font-bold text-slate-300 rounded-lg">EPHEMERAL-DATA</span>
           </div>
         </div>
 
