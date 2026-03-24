@@ -4,9 +4,11 @@ export default function ProgressLog({ progress, totalImages, jobId }) {
   const processedCount = progress.filter(p => p.type === 'image_processed').length
   const progressPercent = totalImages > 0 ? (processedCount / totalImages) * 100 : 0
 
+  const API_BASE = import.meta.env.VITE_API_URL || '';
+
   const handleDownloadSingle = async (filename) => {
     try {
-      const response = await fetch(`/api/download/${jobId}/${filename}`)
+      const response = await fetch(`${API_BASE}/api/download/${jobId}/${filename}`)
       if (!response.ok) throw new Error('Erreur téléchargement')
 
       const blob = await response.blob()

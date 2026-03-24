@@ -182,7 +182,7 @@ export default function Optimizer() {
               )}
 
               {/* Progress Log */}
-              {isProcessing && progress.length > 0 && (
+              {isProcessing && (
                 <div className="mt-8">
                   <ProgressLog progress={progress} totalImages={files.length} jobId={jobId} />
                 </div>
