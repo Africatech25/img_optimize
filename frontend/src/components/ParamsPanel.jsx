@@ -56,11 +56,14 @@ export default function ParamsPanel({
           className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent transition-all"
           disabled={isProcessing}
         >
-          {Object.keys(formats).map(fmt => (
-            <option key={fmt} value={fmt}>
-              {fmt.toUpperCase()}
-            </option>
-          ))}
+          {Object.entries(formats)
+            .filter(([_, config]) => config.available !== false)
+            .map(([fmt, _]) => (
+              <option key={fmt} value={fmt}>
+                {fmt.toUpperCase()}
+              </option>
+            ))
+          }
         </select>
 
         {/* Format Description Badge */}

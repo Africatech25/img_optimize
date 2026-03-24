@@ -167,11 +167,13 @@ async def health_check():
 @app.get("/api/formats")
 async def get_formats():
     """Retourne les formats disponibles avec leurs configurations"""
+    avif_ok = check_avif_support()
     return {
         fmt: {
             "description": config.get("description", ""),
             "default_quality": config["default_quality"],
             "quality_range": config["quality_range"],
+            "available": True if fmt != "avif" else avif_ok
         }
         for fmt, config in FORMAT_CONFIG.items()
     }
@@ -192,6 +194,13 @@ async def start_optimization(
     # Validation du format
     if format not in FORMAT_CONFIG:
         raise HTTPException(status_code=400, detail=f"Format non supporté: {format}")
+    
+    # Vérification spécifique pour AVIF
+    if format == "avif" and not check_avif_support():
+        raise HTTPException(
+            status_code=400, 
+            detail="Le format AVIF n'est pas disponible sur ce serveur. Veuillez utiliser WebP ou JPEG."
+        )
 
     config = FORMAT_CONFIG[format]
 
