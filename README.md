@@ -49,6 +49,7 @@ L'application est séparée en deux parties distinctes :
 
 -   **Frontend** : Développé avec **React** et **Vite.js**. Il utilise **Tailwind CSS** pour une interface "Glassmorphism" moderne et ultra-fluide.
 -   **Backend** : Une API robuste développée avec **FastAPI (Python)**. Elle utilise la bibliothèque **Pillow** et des plugins spécialisés pour un traitement d'image haute performance.
+-   **Gestion des Formats (Smart Detection)** : Le frontend interroge dynamiquement le backend (`/api/config`) pour savoir quels formats sont réellement supportés par le serveur (ex: AVIF). Si un plugin est manquant sur le serveur, le format est automatiquement masqué dans l'interface utilisateur pour éviter toute erreur.
 -   **Analytics** : Intégration de **Vercel Analytics** pour un suivi anonyme des performances.
 
 ---
