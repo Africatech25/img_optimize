@@ -316,9 +316,20 @@ export default function Landing() {
           </div>
 
           <div className="flex gap-4">
-            {['twitter', 'github', 'linkedin'].map((social) => (
-              <a key={social} href="#" className="w-12 h-12 glass-card rounded-full flex items-center justify-center hover:bg-white/10 transition-colors">
-                <i className={`fa-brands fa-${social} text-slate-400 hover:text-white`}></i>
+            {[
+              { id: 'facebook', icon: 'fa-facebook-f', url: 'https://web.facebook.com/profile.php?id=100070643959821' },
+              { id: 'github', icon: 'fa-github', url: '#' },
+              { id: 'linkedin', icon: 'fa-linkedin-in', url: 'https://www.linkedin.com/in/maurice-codjo-6a82b82a3/' }
+            ].map((social) => (
+              <a 
+                key={social.id} 
+                href={social.url} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="w-12 h-12 glass-card rounded-full flex items-center justify-center hover:bg-white/10 transition-colors"
+                title={social.id}
+              >
+                <i className={`fa-brands ${social.icon} text-slate-400 hover:text-white`}></i>
               </a>
             ))}
           </div>
