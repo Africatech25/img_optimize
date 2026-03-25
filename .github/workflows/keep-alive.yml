@@ -17,16 +17,21 @@ jobs:
         run: |
           echo "Pinging API at $(date)"
 
-          # URL de l'API Render
           API_URL="${{ secrets.RENDER_API_URL }}/api/health"
 
-          # Effectuer le ping avec timeout de 30s
-          response=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 "$API_URL")
+          http_code="$(curl -sS -o /dev/null -w "%{http_code}" --connect-timeout 10 --max-time 60 "$API_URL")"
+          curl_ec=$?
 
-          if [ "$response" -eq 200 ]; then
-            echo "✅ API is alive! Status: $response"
+          # Timeout / erreur réseau (curl exit code 28, etc.) : on log mais on ne fait pas échouer le workflow
+          if [ $curl_ec -ne 0 ]; then
+            echo "⚠️  Ping impossible (exit code curl: $curl_ec). Probable cold start/timeout. On ne fait PAS échouer le job."
+            exit 0
+          fi
+
+          if [ "$http_code" -eq 200 ]; then
+            echo "✅ API is alive! Status: $http_code"
           else
-            echo "⚠️  API returned status: $response"
+            echo "⚠️  API returned status: $http_code"
             exit 1
           fi
 
