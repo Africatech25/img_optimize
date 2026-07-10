@@ -126,6 +126,62 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* Testimonials Section */}
+      <section className="px-8 md:px-12 lg:px-20 py-20 lg:py-24 relative">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-16">
+            <span className="text-xs font-bold text-indigo-500 uppercase tracking-[0.3em] mb-4 inline-block px-3 py-1 bg-indigo-500/10 border border-indigo-500/20 rounded-full">Témoignages</span>
+            <h2 className="text-4xl lg:text-6xl font-bold mb-6 text-white leading-tight">
+              Ils nous font <br className="hidden md:block" />
+              confiance
+            </h2>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {[
+              {
+                name: "ESSEGNON Bienvenue",
+                role: "Développeur Web & Graphiste",
+                text: "Je viens d'essayer. C'est super. Thanks",
+                avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Bienvenue"
+              },
+              {
+                name: "Serge Maabe",
+                role: "UX/UI Designer de Funnel",
+                text: "Je peu faire l'audio pour donner mon avis. Le meilleure outils",
+                avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Serge"
+              },
+              {
+                name: "Nestor",
+                role: "Développeur & Entrepeur Web",
+                text: "Absolutely amazing",
+                avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Nestor"
+              }
+            ].map((testimonial, idx) => (
+              <div key={idx} className="glass-card p-8 rounded-[2rem] border border-white/5 hover:border-violet-500/30 transition-all duration-500 group">
+                <div className="flex items-center gap-4 mb-6">
+                  <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-white/10 group-hover:border-violet-500/50 transition-colors">
+                    <img src={testimonial.avatar} alt={testimonial.name} className="w-full h-full object-cover" />
+                  </div>
+                  <div>
+                    <h4 className="text-white font-bold">{testimonial.name}</h4>
+                    <p className="text-slate-500 text-sm">{testimonial.role}</p>
+                  </div>
+                </div>
+                <p className="text-slate-400 italic font-light leading-relaxed">
+                  "{testimonial.text}"
+                </p>
+                <div className="mt-6 flex gap-1 text-violet-500/60">
+                  {[1, 2, 3, 4, 5].map((s) => (
+                    <i key={s} className="fa-solid fa-star text-xs"></i>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* Info Split Section - Dashboard Visual */}
       <section id="analytics" className="px-8 md:px-12 lg:px-20 py-20 lg:py-24 relative overflow-hidden">
         <div className="max-w-7xl mx-auto">
