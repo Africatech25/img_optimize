@@ -1,9 +1,12 @@
 import { useState, useRef } from 'react'
-import { Upload, Image as ImageIcon } from 'lucide-react'
+import { Upload, Image as ImageIcon, File } from 'lucide-react'
 
-const ACCEPTED_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/bmp', 'image/tiff']
+const IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/bmp', 'image/tiff']
+const PDF_TYPES = ['application/pdf']
+const ALL_ACCEPTED_TYPES = [...IMAGE_TYPES, ...PDF_TYPES]
 
-export default function DropZone({ onFilesAdded }) {
+export default function DropZone({ onFilesAdded, modeType = 'auto' }) {
+  // modeType: 'auto' (détecte le type), 'images' (images seulement), 'pdf' (PDF seulement)
   const [isDragging, setIsDragging] = useState(false)
   const fileInputRef = useRef(null)
 
@@ -26,32 +29,98 @@ export default function DropZone({ onFilesAdded }) {
     setIsDragging(false)
   }
 
+  const classifyFiles = (fileList) => {
+    const images = []
+    const pdfs = []
+
+    Array.from(fileList).forEach(file => {
+      if (IMAGE_TYPES.includes(file.type)) {
+        images.push(file)
+      } else if (PDF_TYPES.includes(file.type)) {
+        pdfs.push(file)
+      }
+    })
+
+    return { images, pdfs }
+  }
+
   const handleDrop = (e) => {
     e.preventDefault()
     e.stopPropagation()
     setIsDragging(false)
 
-    const files = Array.from(e.dataTransfer.files).filter(file =>
-      ACCEPTED_TYPES.includes(file.type)
-    )
+    const { images, pdfs } = classifyFiles(e.dataTransfer.files)
 
-    if (files.length > 0) {
-      onFilesAdded(files)
+    if (modeType === 'auto') {
+      // Déterminer le type dominant
+      if (images.length > 0 && pdfs.length === 0) {
+        onFilesAdded(images, 'images')
+      } else if (pdfs.length > 0 && images.length === 0) {
+        onFilesAdded(pdfs, 'pdf')
+      } else if (images.length > 0 && pdfs.length > 0) {
+        // Mélange : prioriser les images
+        onFilesAdded(images, 'images')
+      }
+    } else if (modeType === 'images') {
+      if (images.length > 0) onFilesAdded(images, 'images')
+    } else if (modeType === 'pdf') {
+      if (pdfs.length > 0) onFilesAdded(pdfs, 'pdf')
     }
   }
 
   const handleFileSelect = (e) => {
-    const files = Array.from(e.target.files).filter(file =>
-      ACCEPTED_TYPES.includes(file.type)
-    )
+    const { images, pdfs } = classifyFiles(e.target.files)
 
-    if (files.length > 0) {
-      onFilesAdded(files)
+    if (modeType === 'auto') {
+      if (images.length > 0 && pdfs.length === 0) {
+        onFilesAdded(images, 'images')
+      } else if (pdfs.length > 0 && images.length === 0) {
+        onFilesAdded(pdfs, 'pdf')
+      } else if (images.length > 0 && pdfs.length > 0) {
+        onFilesAdded(images, 'images')
+      }
+    } else if (modeType === 'images') {
+      if (images.length > 0) onFilesAdded(images, 'images')
+    } else if (modeType === 'pdf') {
+      if (pdfs.length > 0) onFilesAdded(pdfs, 'pdf')
     }
   }
 
   const handleBrowseClick = () => {
     fileInputRef.current?.click()
+  }
+
+  const getAcceptAttribute = () => {
+    if (modeType === 'pdf') return '.pdf'
+    if (modeType === 'images') return IMAGE_TYPES.join(',')
+    return ALL_ACCEPTED_TYPES.join(',')
+  }
+
+  const getIcon = () => {
+    if (isDragging) {
+      return <Upload className="w-10 h-10 text-white animate-bounce" />
+    }
+    if (modeType === 'pdf') {
+      return <File className="w-10 h-10 text-slate-400" />
+    }
+    return <ImageIcon className="w-10 h-10 text-slate-400" />
+  }
+
+  const getTitle = () => {
+    if (isDragging) {
+      if (modeType === 'pdf') return 'Déposez votre PDF ici'
+      if (modeType === 'images') return 'Déposez vos images ici'
+      return 'Déposez vos fichiers ici'
+    }
+    if (modeType === 'pdf') return 'Glissez et déposez votre PDF'
+    if (modeType === 'images') return 'Glissez et déposez vos images'
+    return 'Glissez et déposez vos fichiers'
+  }
+
+  const getSupportedFormats = () => {
+    if (modeType === 'pdf') return ['PDF']
+    if (modeType === 'images') return ['JPG', 'PNG', 'WebP', 'BMP', 'TIFF']
+    return ['JPG', 'PNG', 'WebP', 'BMP', 'TIFF', 'PDF']
   }
 
   return (
@@ -69,8 +138,8 @@ export default function DropZone({ onFilesAdded }) {
       <input
         ref={fileInputRef}
         type="file"
-        multiple
-        accept={ACCEPTED_TYPES.join(',')}
+        multiple={modeType !== 'pdf'}
+        accept={getAcceptAttribute()}
         onChange={handleFileSelect}
         className="hidden"
       />
@@ -82,17 +151,13 @@ export default function DropZone({ onFilesAdded }) {
             ? 'bg-gradient-to-br from-violet-600 to-violet-800 scale-110'
             : 'bg-slate-800'
         }`}>
-          {isDragging ? (
-            <Upload className="w-10 h-10 text-white animate-bounce" />
-          ) : (
-            <ImageIcon className="w-10 h-10 text-slate-400" />
-          )}
+          {getIcon()}
         </div>
 
         {/* Text */}
         <div>
           <h3 className="text-2xl font-semibold text-white mb-2">
-            {isDragging ? 'Déposez vos images ici' : 'Glissez et déposez vos images'}
+            {getTitle()}
           </h3>
           <p className="text-slate-400 mb-6">
             ou cliquez sur le bouton ci-dessous pour parcourir
@@ -108,7 +173,7 @@ export default function DropZone({ onFilesAdded }) {
 
         {/* Accepted formats */}
         <div className="flex flex-wrap gap-2 justify-center">
-          {['JPG', 'PNG', 'WebP', 'BMP', 'TIFF'].map(fmt => (
+          {getSupportedFormats().map(fmt => (
             <span
               key={fmt}
               className="px-3 py-1 bg-slate-800 text-slate-400 text-xs font-medium rounded-full"

@@ -1,0 +1,75 @@
+[run]
+# Configuration coverage.py pour pytest-cov
+
+# Fichiers à inclure dans la couverture
+source = .
+
+# Fichiers à exclure
+omit =
+    */tests/*
+    */test_*.py
+    */__pycache__/*
+    */venv/*
+    */env/*
+    */.venv/*
+    */site-packages/*
+    conftest.py
+    run_tests.py
+    setup.py
+
+# Branches à suivre (if/else)
+branch = True
+
+# Parallélisation
+parallel = False
+
+[report]
+# Précision du pourcentage
+precision = 2
+
+# Afficher les lignes manquantes
+show_missing = True
+
+# Ignorer les erreurs de fichiers manquants
+ignore_errors = True
+
+# Exclure les lignes avec ces patterns
+exclude_lines =
+    # Pragma standard
+    pragma: no cover
+    
+    # Défensif
+    def __repr__
+    def __str__
+    
+    # Abstractions
+    raise AssertionError
+    raise NotImplementedError
+    
+    # Type checking
+    if TYPE_CHECKING:
+    if typing.TYPE_CHECKING:
+    
+    # Debug
+    if __name__ == .__main__.:
+    if DEBUG:
+    
+    # Pass statements
+    pass
+    
+    # Ellipsis
+    \.\.\.
+
+[html]
+# Configuration rapport HTML
+directory = htmlcov
+title = Backend img_optimize - Coverage Report
+
+[json]
+# Configuration rapport JSON
+output = coverage.json
+pretty_print = True
+
+[xml]
+# Configuration rapport XML (pour CI/CD)
+output = coverage.xml

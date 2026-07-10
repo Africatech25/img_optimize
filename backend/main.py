@@ -20,26 +20,42 @@ from PIL import Image
 import shutil
 import tempfile
 import uuid
-from typing import List, Dict
+from typing import List, Dict, Optional
 import json
 import asyncio
 import zipfile
 from io import BytesIO
 from datetime import datetime, timedelta
 import os
+import logging
 
 # Importation du script optimize_images
-from optimize_images import FORMAT_CONFIG, convert_image, format_size, check_avif_support
+from optimize_images import FORMAT_CONFIG, convert_image, format_size, check_avif_support, SUPPORTED_EXTENSIONS
+
+logger = logging.getLogger(__name__)
+
+# Configuration CORS sécurisée - Production
+ALLOWED_ORIGINS = [
+    "https://img-optimize.vercel.app",  # Production frontend
+    "http://localhost:5173",             # Dev frontend (Vite)
+    "http://localhost:3000",             # Dev frontend (alternative)
+    "http://127.0.0.1:5173",
+    "http://127.0.0.1:3000"
+]
+
+# Limites de sécurité
+MAX_FILE_SIZE = 50 * 1024 * 1024  # 50 MB
+MAX_FILES_PER_REQUEST = 200
 
 app = FastAPI(title="Image Optimizer API", version="2.0.0")
 
 # CORS pour permettre les requêtes du frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Content-Type", "Accept"],
 )
 
 # Dossiers temporaires
@@ -92,15 +108,6 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Image Optimizer API", version="2.0.0", lifespan=lifespan)
-
-# CORS pour permettre les requêtes du frontend
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 
 class OptimizationJob:
@@ -186,11 +193,32 @@ async def start_optimization(
     quality: int = Form(None),
     prefix: str = Form("image"),
     start_number: int = Form(1),
+    smoothing: int = Form(0),
+    watermark_enabled: str = Form("false"),
+    watermark_type: str = Form("text"),
+    watermark_text: str = Form(""),
+    watermark_logo: Optional[UploadFile] = File(None),
+    watermark_position: str = Form("bottom-right"),
+    watermark_opacity: str = Form("50"),
 ):
     """
     Démarre l'optimisation d'images et retourne un job_id
     pour suivre la progression via SSE
     """
+    # SÉCURITÉ: Validation du nombre de fichiers
+    if len(files) > MAX_FILES_PER_REQUEST:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Maximum {MAX_FILES_PER_REQUEST} fichiers autorisés (reçu: {len(files)})"
+        )
+    
+    # Conversion des strings reçues du FormData en types appropriés
+    watermark_enabled = watermark_enabled.lower() in ('true', '1', 'yes', 'on')
+    try:
+        watermark_opacity = int(watermark_opacity)
+    except (ValueError, TypeError):
+        watermark_opacity = 50
+    
     # Validation du format
     if format not in FORMAT_CONFIG:
         raise HTTPException(status_code=400, detail=f"Format non supporté: {format}")
@@ -208,22 +236,85 @@ async def start_optimization(
     if quality is None:
         quality = config["default_quality"]
 
+    # On autorise la qualité 100 pour le mode "Signature uniquement" (sans compression)
+    # même si la config format limite par défaut à 95 par exemple
     q_min, q_max = config["quality_range"]
-    if not (q_min <= quality <= q_max):
+    if quality != 100 and not (q_min <= quality <= q_max):
         raise HTTPException(
             status_code=400,
             detail=f"Qualité pour {format.upper()} doit être entre {q_min} et {q_max}"
         )
 
+    # Validation du lissage (0 à 10 par exemple)
+    if not (0 <= smoothing <= 10):
+        raise HTTPException(
+            status_code=400,
+            detail="Le lissage doit être entre 0 et 10"
+        )
+
+    # Validation de l'opacité du watermark (0-100)
+    if not (0 <= watermark_opacity <= 100):
+        raise HTTPException(
+            status_code=400,
+            detail="L'opacité du watermark doit être entre 0 et 100"
+        )
+
+    # Création des paramètres de watermark
+    watermark_params = {
+        "enabled": watermark_enabled,
+        "type": watermark_type,
+        "text": watermark_text,
+        "position": watermark_position,
+        "opacity": watermark_opacity,
+        "image_path": None
+    }
+
+    # Sauvegarder temporairement le logo si fourni
+    logo_temp_path = None
+    if watermark_enabled and watermark_type == "image" and watermark_logo:
+        try:
+            # SÉCURITÉ: Validation de la taille du logo
+            logo_content = await watermark_logo.read(MAX_FILE_SIZE + 1)
+            
+            if len(logo_content) > MAX_FILE_SIZE:
+                raise HTTPException(
+                    status_code=413,
+                    detail=f"Logo trop volumineux (max {MAX_FILE_SIZE/1024/1024:.0f}MB)"
+                )
+            
+            logo_ext = Path(watermark_logo.filename).suffix.lower()
+            if logo_ext not in SUPPORTED_EXTENSIONS:
+                raise HTTPException(status_code=400, detail="Format de logo non supporté")
+            
+            logo_temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=logo_ext)
+            logo_temp_file.write(logo_content)
+            logo_temp_file.close()
+            logo_temp_path = logo_temp_file.name
+            watermark_params["image_path"] = logo_temp_path
+        except HTTPException:
+            raise  # Re-lancer les HTTPException
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"Erreur lors de la lecture du logo: {str(e)}")
+
     # IMPORTANT: Lire les fichiers IMMÉDIATEMENT avant que FastAPI les ferme
     file_data = []
     for file in files:
         try:
-            content = await file.read()
+            # SÉCURITÉ: Validation de la taille du fichier
+            content = await file.read(MAX_FILE_SIZE + 1)
+            
+            if len(content) > MAX_FILE_SIZE:
+                raise HTTPException(
+                    status_code=413,
+                    detail=f"Fichier '{file.filename}' trop volumineux (max {MAX_FILE_SIZE/1024/1024:.0f}MB)"
+                )
+            
             file_data.append({
                 "filename": file.filename,
                 "content": content
             })
+        except HTTPException:
+            raise  # Re-lancer les HTTPException
         except Exception as e:
             raise HTTPException(status_code=400, detail=f"Erreur lecture fichier {file.filename}: {str(e)}")
 
@@ -238,7 +329,7 @@ async def start_optimization(
 
     # Lancer le traitement en arrière-plan avec les données des fichiers (pas les objets UploadFile)
     asyncio.create_task(
-        process_images_async(job, file_data, format, quality, prefix, start_number)
+        process_images_async(job, file_data, format, quality, prefix, start_number, smoothing, watermark_params)
     )
 
     return {
@@ -254,7 +345,9 @@ async def process_images_async(
     fmt: str,
     quality: int,
     prefix: str,
-    start_number: int
+    start_number: int,
+    smoothing: int = 0,
+    watermark_params: dict = None
 ):
     """
     Traite les images de manière asynchrone et met à jour la progression.
@@ -285,11 +378,18 @@ async def process_images_async(
             })
 
             # Traiter ce lot
-            counter = await process_batch(job, batch, fmt, quality, prefix, counter, batch_size)
+            counter = await process_batch(job, batch, fmt, quality, prefix, counter, batch_size, smoothing, watermark_params)
     else:
         # Moins de 10 images, traiter normalement
         for idx, file_info in enumerate(file_data, start=1):
-            counter = await process_single_image(job, file_info, fmt, quality, prefix, counter, idx)
+            counter = await process_single_image(job, file_info, fmt, quality, prefix, counter, idx, smoothing, watermark_params)
+
+    # Nettoyage du logo temporaire si nécessaire
+    if watermark_params and watermark_params.get("image_path"):
+        try:
+            os.unlink(watermark_params["image_path"])
+        except:
+            pass
 
     # Terminer le job
     job.status = "completed"
@@ -308,7 +408,9 @@ async def process_batch(
     quality: int,
     prefix: str,
     start_counter: int,
-    batch_size: int
+    batch_size: int,
+    smoothing: int = 0,
+    watermark_params: dict = None
 ) -> int:
     """Traite un lot d'images"""
     counter = start_counter
@@ -316,7 +418,7 @@ async def process_batch(
     ext = config["extension"]
 
     for idx, file_info in enumerate(batch, start=1):
-        counter = await process_single_image(job, file_info, fmt, quality, prefix, counter, idx)
+        counter = await process_single_image(job, file_info, fmt, quality, prefix, counter, idx, smoothing, watermark_params)
 
     return counter
 
@@ -328,7 +430,9 @@ async def process_single_image(
     quality: int,
     prefix: str,
     counter: int,
-    idx: int
+    idx: int,
+    smoothing: int = 0,
+    watermark_params: dict = None
 ) -> int:
     """Traite une seule image et retourne le compteur mis à jour"""
     config = FORMAT_CONFIG[fmt]
@@ -347,8 +451,19 @@ async def process_single_image(
         output_filename = f"{prefix}-{counter:02d}{ext}"
         output_path = job.output_dir / output_filename
 
-        # Optimiser l'image avec limite OBLIGATOIRE de 1 Mo
-        before, after, status = convert_image(temp_input, output_path, fmt, quality, max_size_mo=1.0)
+        # Optimiser l'image avec limite OBLIGATOIRE de 1 Mo et lissage optionnel
+        # Appel synchrone car convert_image fait du calcul lourd
+        # On utilise asyncio.to_thread pour ne pas bloquer la boucle d'événements
+        before, after, status = await asyncio.to_thread(
+            convert_image, 
+            temp_input, 
+            output_path, 
+            fmt, 
+            quality, 
+            max_size_mo=1.0, 
+            smoothing=smoothing,
+            watermark_params=watermark_params
+        )
 
         gain_pct = (1 - after / before) * 100 if before > 0 else 0
 

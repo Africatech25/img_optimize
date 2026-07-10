@@ -12,7 +12,8 @@ Une application web locale moderne et élégante pour optimiser vos images pour 
 - **⚡ Formats modernes** - JPEG, WebP, AVIF, PNG au choix
 - **📡 Progression en temps réel** - Server-Sent Events (SSE) pour un suivi live
 - **🏷️ Renommage SEO** - Nommage automatique optimisé pour Google
-- **🔒 100% local** - Aucune donnée envoyée sur internet
+- **✍️ Branding & Signature** - Apposez logo ou texte pour protéger et marquer vos créations
+- ** 100% local** - Aucune donnée envoyée sur internet
 - **🌙 Dark mode élégant** - Interface moderne avec Tailwind CSS
 
 ## 📁 Structure du projet

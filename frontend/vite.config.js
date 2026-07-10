@@ -7,8 +7,12 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
+      '/api/pdf': {
+        target: 'http://localhost:8002',
+        changeOrigin: true,
+      },
       '/api': {
-        target: 'http://localhost:8000',
+        target: 'http://localhost:8001',
         changeOrigin: true,
       }
     }

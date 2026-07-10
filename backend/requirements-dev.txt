@@ -1,0 +1,17 @@
+# Requirements pour tests et développement
+# À installer avec: pip install -r requirements-dev.txt
+
+# Framework de tests
+pytest==8.3.4
+pytest-asyncio==0.24.0
+pytest-cov==6.0.0
+pytest-mock==3.14.0
+
+# Client HTTP pour tester FastAPI
+httpx==0.28.1
+
+# Tests de performance
+pytest-benchmark==5.1.0
+
+# Rapport de couverture
+coverage[toml]==7.6.9

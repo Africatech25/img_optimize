@@ -147,5 +147,42 @@ def format_size(size_bytes: int) -> str:
     return f"{size_bytes / 1_000:.0f} Ko"
 
 
+def test_smoothing():
+    """Teste spécifiquement la nouvelle fonctionnalité de lissage"""
+    test_dir = Path("test_images")
+    output_dir = test_dir / "optimized_smoothing"
+    output_dir.mkdir(exist_ok=True)
+
+    images = sorted([
+        f for f in test_dir.iterdir()
+        if f.is_file() and f.suffix.lower() in SUPPORTED_EXTENSIONS
+    ])
+
+    if not images:
+        return
+
+    print("\n" + "=" * 80)
+    print("🧪 TEST DE LISSAGE (Smoothing)")
+    print("=" * 80)
+    
+    img_path = images[0]
+    fmt = "webp"
+    quality = 80
+    
+    for level in [0, 2, 5]:
+        output_path = output_dir / f"{img_path.stem}_smoothing_{level}.webp"
+        print(f"Bruit/Lissage niveau {level} sur {img_path.name}...")
+        
+        before, after, status = convert_image(
+            img_path,
+            output_path,
+            fmt,
+            quality,
+            max_size_mo=1.0,
+            smoothing=level
+        )
+        print(f"  → Taille: {format_size(after)} (Gain: {(1-after/before)*100:.1f}%)")
+
 if __name__ == "__main__":
     test_optimization()
+    test_smoothing()

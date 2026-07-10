@@ -1,0 +1,35 @@
+<mxfile host="app.diagrams.net">
+  <diagram id="mcd-optim-v1" name="MCD Optimisation">
+    <mxGraphModel>
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <!-- Entité Image -->
+        <mxCell id="2" value="Image" style="swimlane;startSize=35;fontStyle=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="60" y="60" width="180" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="3" value="id (souligné)\nnom\ntaille\nformat" style="text;align=left;spacingLeft=10;" vertex="1" parent="2">
+          <mxGeometry x="0" y="35" width="180" height="35" as="geometry" />
+        </mxCell>
+        <!-- Entité Paramètre -->
+        <mxCell id="4" value="Paramètre" style="swimlane;startSize=35;fontStyle=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="300" y="60" width="140" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="5" value="qualité\nformat_cible" style="text;align=left;spacingLeft=10;" vertex="1" parent="4">
+          <mxGeometry x="0" y="35" width="140" height="25" as="geometry" />
+        </mxCell>
+        <!-- Association Optimiser -->
+        <mxCell id="6" value="Optimiser" style="rounded=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="180" y="90" width="80" height="30" as="geometry" />
+        </mxCell>
+        <!-- Liaisons -->
+        <mxCell id="7" style="edgeStyle=orthogonalEdgeStyle;endArrow=none;" edge="1" parent="1" source="2" target="6">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="8" style="edgeStyle=orthogonalEdgeStyle;endArrow=none;" edge="1" parent="1" source="4" target="6">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

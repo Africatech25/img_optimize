@@ -22,8 +22,8 @@ export default function Landing() {
 
           {/* Subtitle */}
           <p className="text-lg lg:text-xl text-slate-400 mb-12 max-w-2xl mx-auto font-light leading-relaxed">
-            Réduisez significativement le poids de vos fichiers sans sacrifier la qualité.
-            La solution ultime pour un SEO performant et une expérience utilisateur fluide.
+            Comprimez, signez, nettoyez vos images en un seul endroit. La solution complète pour un branding cohérent,
+            un SEO performant et une gestion d'assets fluide.
           </p>
 
           {/* CTA Group */}
@@ -103,10 +103,16 @@ export default function Landing() {
                 color: 'bg-fuchsia-600'
               },
               {
+                icon: 'fa-pen-nib',
+                title: 'Branding & Signature',
+                desc: 'Apposez un logo ou du texte sur vos images automatiquement. Protégez votre création et continuez à optimiser.',
+                color: 'bg-rose-600'
+              },
+              {
                 icon: 'fa-layer-group',
                 title: 'Workflow Illimité',
                 desc: 'Aucun compte requis. Traitez des centaines d\'images sans file d\'attente ni aucune restriction.',
-                color: 'bg-rose-600'
+                color: 'bg-orange-600'
               }
             ].map((feature, idx) => (
               <div 

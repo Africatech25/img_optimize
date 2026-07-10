@@ -1,5 +1,5 @@
 services:
-  # Service Backend API
+  # Service Backend API (optimisation d'images)
   - type: web
     name: img-optimize-api
     env: python
@@ -7,6 +7,21 @@ services:
     plan: free
     buildCommand: "pip install -r backend/requirements.txt"
     startCommand: "cd backend && uvicorn main:app --host 0.0.0.0 --port $PORT"
+    healthCheckPath: /api/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: PORT
+        generateValue: true
+
+  # Service PDF Repair (réparation/analyse de PDF)
+  - type: web
+    name: img-optimize-pdf-service
+    env: python
+    region: frankfurt
+    plan: free
+    buildCommand: "pip install -r pdf-repair-service/requirements.txt"
+    startCommand: "cd pdf-repair-service && uvicorn main:app --host 0.0.0.0 --port $PORT"
     healthCheckPath: /api/health
     envVars:
       - key: PYTHON_VERSION

@@ -30,7 +30,7 @@ Dépendances :
 import argparse
 import sys
 from pathlib import Path
-from PIL import Image
+from PIL import Image, ImageFilter, ImageDraw, ImageFont
 
 # Extensions supportées en entrée
 SUPPORTED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".bmp", ".tiff", ".tif"}
@@ -78,6 +78,8 @@ def convert_image(
     fmt: str,
     quality: int,
     max_size_mo: float = 0,
+    smoothing: int = 0,
+    watermark_params: dict = None,
 ) -> tuple[int, int, str]:
     """
     Convertit, optimise et compresse une image pour respecter une limite de taille.
@@ -88,6 +90,8 @@ def convert_image(
         fmt: Format de sortie (jpeg, webp, avif, png)
         quality: Qualité initiale
         max_size_mo: Taille maximale en Mo (0 = pas de limite)
+        smoothing: Intensité du lissage (0 = aucun, >0 = rayon du flou gaussien)
+        watermark_params: Paramètres de marquage (optionnel)
 
     Retourne:
         (taille_originale, taille_finale, status)
@@ -105,6 +109,10 @@ def convert_image(
     output_path_str = str(output_path_obj)
 
     with Image.open(input_path) as img:
+        # --- Signature (Watermarking) ---
+        if watermark_params and watermark_params.get("enabled"):
+            img = apply_watermark(img, watermark_params)
+
         # --- Gestion de la transparence selon le format ---
         if fmt == "jpeg":
             # JPEG ne supporte pas la transparence → fond blanc
@@ -126,6 +134,10 @@ def convert_image(
                 img = img.convert("RGB")
 
         # PNG : on garde le mode original, aucune conversion nécessaire
+
+        # --- Lissage ---
+        if smoothing > 0:
+            img = img.filter(ImageFilter.GaussianBlur(radius=smoothing))
 
         # --- PRÉ-DIMENSIONNEMENT INTELLIGENT (OPTIMISATION) ---
         # Si une limite de taille est active, estimer les dimensions optimales AVANT la boucle
@@ -291,6 +303,129 @@ def estimate_target_dimensions(
         new_height = max(100, int(img_height * scale_min))
 
     return new_width, new_height
+
+
+def apply_watermark(
+    img: Image.Image,
+    watermark_params: dict,
+) -> Image.Image:
+    """
+    Applique un marquage (texte ou image) sur une image Pillow.
+
+    Args:
+        img: Image source (Pillow Object)
+        watermark_params: Dictionnaire contenant:
+            enabled: bool
+            type: 'text' | 'image'
+            text: str (si type='text')
+            image_path: str (si type='image')
+            position: 'top-left' | 'top-center' | 'top-right' | 
+                      'middle-left' | 'middle-center' | 'middle-right' | 
+                      'bottom-left' | 'bottom-center' | 'bottom-right'
+            opacity: int (0-100)
+            scale: float (0.1-1.0, défaut 0.15) relative à la largeur de l'image
+    """
+    if not watermark_params.get("enabled", False):
+        return img
+
+    # S'assurer que l'image est en RGBA pour le compositing
+    if img.mode != "RGBA":
+        img = img.convert("RGBA")
+
+    # Création d'une couche transparente pour le watermark
+    overlay = Image.new("RGBA", img.size, (0, 0, 0, 0))
+    draw = ImageDraw.Draw(overlay)
+    
+    w_img, h_img = img.size
+    opacity = int(watermark_params.get("opacity", 50) * 2.55)
+    position = watermark_params.get("position", "bottom-right")
+    
+    # 1. Préparation du contenu du watermark
+    mark_content = None
+    
+    if watermark_params.get("type") == "text":
+        text = watermark_params.get("text", "ImgOpt Branding")
+        # Calcul de la taille de police relative (5% de la largeur par défaut)
+        font_size = int(w_img * 0.04)
+        try:
+            # Tenter de charger une police système standard
+            font = ImageFont.truetype("arial.ttf", font_size)
+        except:
+            font = ImageFont.load_default()
+            
+        # Mesurer le texte
+        left, top, right, bottom = draw.textbbox((0, 0), text, font=font)
+        w_mark, h_mark = right - left, bottom - top
+        
+        # Dessiner le texte sur l'overlay avec l'opacité
+        # On ajoute un léger contour/ombre pour la lisibilité
+        def draw_text_at(x, y, fill_color):
+            draw.text((x, y), text, font=font, fill=fill_color)
+
+        mark_content = (w_mark, h_mark, "text", text, font)
+        
+    elif watermark_params.get("type") == "image":
+        img_path = watermark_params.get("image_path")
+        if img_path and Path(img_path).exists():
+            with Image.open(img_path) as watermark_img_ref:
+                # Charger l'image immédiatement en mémoire pour éviter les fermetures de contexte
+                if watermark_img_ref.mode != "RGBA":
+                    watermark_img = watermark_img_ref.convert("RGBA")
+                else:
+                    watermark_img = watermark_img_ref.copy()
+                
+                # Redimensionnement relatif (15% de la largeur par défaut)
+                rel_scale = watermark_params.get("scale", 0.15)
+                w_mark = int(w_img * rel_scale)
+                aspect_ratio = watermark_img.height / watermark_img.width
+                h_mark = int(w_mark * aspect_ratio)
+                
+                watermark_img = watermark_img.resize((w_mark, h_mark), Image.Resampling.LANCZOS)
+                
+                # Appliquer l'opacité globale si nécessaire
+                if watermark_params.get("opacity", 100) < 100:
+                    alpha = watermark_img.split()[3]
+                    alpha = alpha.point(lambda p: int(p * (watermark_params["opacity"] / 100)))
+                    watermark_img.putalpha(alpha)
+                
+                mark_content = (w_mark, h_mark, "image", watermark_img)
+
+    if not mark_content:
+        return img
+
+    # 2. Calcul des coordonnées (x, y) selon l'ancrage
+    w_mark, h_mark = mark_content[0], mark_content[1]
+    margin = int(w_img * 0.02) # 2% de marge de sécurité
+    
+    # X Position
+    if "left" in position:
+        x = margin
+    elif "center" in position:
+        x = (w_img - w_mark) // 2
+    else: # right
+        x = w_img - w_mark - margin
+        
+    # Y Position
+    if "top" in position:
+        y = margin
+    elif "middle" in position:
+        y = (h_img - h_mark) // 2
+    else: # bottom
+        y = h_img - h_mark - margin
+
+    # 3. Application finale
+    if mark_content[2] == "text":
+        text, font = mark_content[3], mark_content[4]
+        # Ombre portée pour lisibilité universelle (contraste)
+        draw.text((x+2, y+2), text, font=font, fill=(0, 0, 0, int(opacity * 0.5)))
+        draw.text((x, y), text, font=font, fill=(255, 255, 255, opacity))
+        return Image.alpha_composite(img, overlay)
+    else:
+        watermark_img = mark_content[3]
+        # Créer une image RGBA de la taille de img pour la composition
+        overlay_with_logo = Image.new("RGBA", img.size, (0, 0, 0, 0))
+        overlay_with_logo.paste(watermark_img, (x, y), watermark_img)
+        return Image.alpha_composite(img, overlay_with_logo)
 
 
 def main():
