@@ -3,3 +3,4 @@ uvicorn[standard]==0.32.0
 python-multipart==0.0.12
 Pillow==11.0.0
 pillow-avif-plugin==1.4.6
+ffmpeg-python==0.2.0

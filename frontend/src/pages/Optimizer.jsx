@@ -9,18 +9,44 @@ import ResultCard from '../components/ResultCard'
 
 import { track } from '@vercel/analytics'
 
+const VIDEO_EXTENSIONS = new Set(['.mp4', '.webm', '.avi', '.mov', '.mkv', '.flv', '.wmv', '.m4v', '.3gp'])
+
+function isVideoFile(filename) {
+  const ext = filename.toLowerCase().split('.').pop()
+  return VIDEO_EXTENSIONS.has(`.${ext}`)
+}
+
 export default function Optimizer() {
   const API_BASE = import.meta.env.VITE_API_URL || '';
   const [files, setFiles] = useState([])
+
+  // Image params
   const [format, setFormat] = useState('webp')
   const [quality, setQuality] = useState(82)
+
+  // Video params
+  const [videoCodec, setVideoCodec] = useState('h264')
+  const [videoQuality, setVideoQuality] = useState(28)
+  const [resolution, setResolution] = useState('original')
+  const [maxFps, setMaxFps] = useState('')
+
+  // Common params
   const [prefix, setPrefix] = useState('')
   const [startNumber, setStartNumber] = useState(1)
+
+  // UI state
   const [isProcessing, setIsProcessing] = useState(false)
   const [jobId, setJobId] = useState(null)
   const [progress, setProgress] = useState([])
   const [result, setResult] = useState(null)
+
+  // Config from API
   const [formats, setFormats] = useState({})
+  const [videoCodecs, setVideoCodecs] = useState({})
+
+  // Compute file types
+  const hasImages = files.some(f => !isVideoFile(f.name))
+  const hasVideos = files.some(f => isVideoFile(f.name))
 
   // Charger les formats disponibles au montage
   useEffect(() => {
@@ -28,20 +54,18 @@ export default function Optimizer() {
       .then(res => res.json())
       .then(data => {
         setFormats(data)
-        // Définir la qualité par défaut selon le format
-        if (data[format]) {
-          setQuality(data[format].default_quality)
-        }
       })
       .catch(err => console.error('Erreur chargement formats:', err))
-  }, [])
 
-  // Mettre à jour la qualité par défaut quand le format change
-  useEffect(() => {
-    if (formats[format]) {
-      setQuality(formats[format].default_quality)
-    }
-  }, [format, formats])
+    fetch(`${API_BASE}/api/video/formats`)
+      .then(res => res.json())
+      .then(data => {
+        setVideoCodecs(data)
+      })
+      .catch(err => console.error('Erreur chargement codecs vidéo:', err))
+  }, [API_BASE])
+
+  // Les qualités par défaut sont définies dans les useState initiaux
 
   const handleFilesAdded = (newFiles) => {
     setFiles(prev => [...prev, ...newFiles])
@@ -67,6 +91,12 @@ export default function Optimizer() {
     formData.append('quality', quality)
     formData.append('prefix', prefix)
     formData.append('start_number', startNumber)
+    formData.append('codec', videoCodec)
+    formData.append('video_quality', videoQuality)
+    formData.append('resolution', resolution)
+    if (maxFps) {
+      formData.append('max_fps', maxFps)
+    }
 
     try {
       // Démarrer l'optimisation
@@ -76,7 +106,8 @@ export default function Optimizer() {
       })
 
       if (!response.ok) {
-        throw new Error('Erreur lors du démarrage de l\'optimisation')
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.detail || 'Erreur lors du démarrage de l\'optimisation')
       }
 
       const data = await response.json()
@@ -90,12 +121,13 @@ export default function Optimizer() {
 
         if (message.type === 'done') {
           eventSource.close()
-          
+
           // Traquer l'événement de succès
-          track('images_optimized', { 
-            count: files.length, 
+          track('files_optimized', {
+            images: data.total_images,
+            videos: data.total_videos,
             format: format,
-            quality: quality 
+            codec: videoCodec,
           })
 
           // Récupérer les stats finales
@@ -118,7 +150,7 @@ export default function Optimizer() {
 
     } catch (error) {
       console.error('Erreur:', error)
-      alert('Une erreur est survenue lors de l\'optimisation')
+      alert(error.message || 'Une erreur est survenue lors de l\'optimisation')
       setIsProcessing(false)
     }
   }
@@ -151,22 +183,33 @@ export default function Optimizer() {
             {/* Left Column - Params */}
             <div className="lg:col-span-1">
               <ParamsPanel
-                prefix={prefix}
-                setPrefix={setPrefix}
                 format={format}
                 setFormat={setFormat}
                 quality={quality}
                 setQuality={setQuality}
+                formats={formats}
+                videoCodec={videoCodec}
+                setVideoCodec={setVideoCodec}
+                videoQuality={videoQuality}
+                setVideoQuality={setVideoQuality}
+                videoCodecs={videoCodecs}
+                resolution={resolution}
+                setResolution={setResolution}
+                maxFps={maxFps}
+                setMaxFps={setMaxFps}
+                prefix={prefix}
+                setPrefix={setPrefix}
                 startNumber={startNumber}
                 setStartNumber={setStartNumber}
-                formats={formats}
                 canOptimize={canOptimize}
                 onOptimize={handleOptimize}
                 isProcessing={isProcessing}
+                hasImages={hasImages}
+                hasVideos={hasVideos}
               />
             </div>
 
-            {/* Right Column - Images */}
+            {/* Right Column - Files */}
             <div className="lg:col-span-2">
               {files.length === 0 ? (
                 <DropZone onFilesAdded={handleFilesAdded} />
@@ -175,6 +218,7 @@ export default function Optimizer() {
                   files={files}
                   prefix={prefix}
                   format={format}
+                  videoCodec={videoCodec}
                   startNumber={startNumber}
                   onRemoveFile={handleRemoveFile}
                   onFilesAdded={handleFilesAdded}
