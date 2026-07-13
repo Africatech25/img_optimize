@@ -5,6 +5,7 @@ Backend FastAPI pour l'optimisation d'images et vidéos avec SSE
 """
 import sys
 import io
+import re
 import traceback
 
 # Forcer l'encodage UTF-8 pour Windows
@@ -12,9 +13,13 @@ if sys.platform == 'win32':
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
     sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
 
-from fastapi import FastAPI, File, UploadFile, Form, HTTPException
+from fastapi import FastAPI, File, UploadFile, Form, HTTPException, Request
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 from contextlib import asynccontextmanager
 from pathlib import Path
 import shutil
@@ -35,6 +40,25 @@ from video_processor import (
     get_video_info, format_size as format_size_video,
     format_duration, VIDEO_EXTENSIONS
 )
+
+# ==================== CONFIGURATION ====================
+
+# CORS - domaines autorises (a modifier en prod)
+ALLOWED_ORIGINS = [
+    origin.strip()
+    for origin in os.environ.get("CORS_ORIGINS", "http://localhost:5173,http://localhost:3000").split(",")
+    if origin.strip()
+]
+
+# Upload
+MAX_UPLOAD_SIZE_MB = int(os.environ.get("MAX_UPLOAD_SIZE_MB", "50"))
+MAX_UPLOAD_SIZE_BYTES = MAX_UPLOAD_SIZE_MB * 1024 * 1024
+
+# Jobs
+MAX_CONCURRENT_JOBS = int(os.environ.get("MAX_CONCURRENT_JOBS", "20"))
+
+# Prefixe : lettres, chiffres, tirets, underscores, 1-100 caractères
+PREFIX_REGEX = re.compile(r"^[a-zA-Z0-9_-]{1,100}$")
 
 # Dossiers temporaires
 TEMP_DIR = Path(tempfile.gettempdir()) / "image_optimizer"
@@ -94,7 +118,10 @@ async def cleanup_old_jobs():
 async def lifespan(app: FastAPI):
     """Gestion du cycle de vie de l'application"""
     global cleanup_task
-    # Démarrage
+    # Démarrage : nettoyer les fichiers temporaires residuels
+    if TEMP_DIR.exists():
+        shutil.rmtree(TEMP_DIR, ignore_errors=True)
+        TEMP_DIR.mkdir(exist_ok=True)
     cleanup_task = asyncio.create_task(cleanup_old_jobs())
     yield
     # Arrêt
@@ -102,15 +129,20 @@ async def lifespan(app: FastAPI):
         cleanup_task.cancel()
 
 
-app = FastAPI(title="ImgOpt API", version="3.0.0", lifespan=lifespan)
+app = FastAPI(title="ImgOpt API", version="3.1.0", lifespan=lifespan)
 
-# CORS pour permettre les requêtes du frontend
+# Rate limiting
+limiter = Limiter(key_func=get_remote_address)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+# CORS restreint aux domaines autorises
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "DELETE"],
+    allow_headers=["Content-Type"],
 )
 
 
@@ -223,7 +255,9 @@ async def get_video_formats():
 
 
 @app.post("/api/optimize")
+@limiter.limit("10/minute")
 async def start_optimization(
+    request: Request,
     files: List[UploadFile] = File(...),
     format: str = Form("webp"),
     quality: int = Form(None),
@@ -260,6 +294,21 @@ async def start_optimization(
 
     if not image_files and not video_files:
         raise HTTPException(status_code=400, detail="Aucun fichier valide fourni")
+
+    # B5: Valider le prefixe (injection prevention)
+    if not PREFIX_REGEX.match(prefix):
+        raise HTTPException(
+            status_code=400,
+            detail="Prefixe invalide. Utilisez uniquement lettres, chiffres, tirets ou underscores (1-100 car.)"
+        )
+
+    # I1: Limiter les jobs concurrents
+    active_jobs = sum(1 for j in jobs.values() if j.status in ("pending", "processing"))
+    if active_jobs >= MAX_CONCURRENT_JOBS:
+        raise HTTPException(
+            status_code=429,
+            detail=f"Trop de jobs en cours ({active_jobs}/{MAX_CONCURRENT_JOBS}). Reessayez dans quelques secondes."
+        )
 
     # Valider les paramètres images si des images sont présentes
     if image_files:
@@ -302,6 +351,12 @@ async def start_optimization(
     for file in (image_files + video_files):
         try:
             content = await file.read()
+            # B3: Verifier la taille du fichier
+            if len(content) > MAX_UPLOAD_SIZE_BYTES:
+                raise HTTPException(
+                    status_code=413,
+                    detail=f"Fichier {file.filename} trop volumineux ({len(content) // (1024*1024)} MB). Maximum : {MAX_UPLOAD_SIZE_MB} MB."
+                )
             file_data.append({
                 "filename": file.filename,
                 "content": content,
@@ -662,7 +717,11 @@ async def download_file(job_id: str):
     zip_buffer = BytesIO()
     with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
         for file_path in files:
-            zip_file.write(file_path, file_path.name)
+            # B6: Protection Zip Slip — s'assurer que le chemin reste dans output_dir
+            safe_name = file_path.name
+            if ".." in safe_name or "/" in safe_name or "\\" in safe_name:
+                raise HTTPException(status_code=500, detail="Chemin de fichier invalide")
+            zip_file.write(file_path, safe_name)
 
     zip_buffer.seek(0)
 
@@ -687,6 +746,10 @@ async def download_single_file(job_id: str, filename: str):
 
     if not job.output_dir.exists():
         raise HTTPException(status_code=404, detail="Dossier non trouvé")
+
+    # B6: Protection Path Traversal — valider le nom du fichier
+    if ".." in filename or "/" in filename or "\\" in filename:
+        raise HTTPException(status_code=400, detail="Nom de fichier invalide")
 
     file_path = job.output_dir / filename
 
@@ -723,7 +786,11 @@ async def download_zip_only(job_id: str):
     with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
         for file_path in job.output_dir.iterdir():
             if file_path.is_file():
-                zip_file.write(file_path, file_path.name)
+                # B6: Protection Zip Slip
+                safe_name = file_path.name
+                if ".." in safe_name or "/" in safe_name or "\\" in safe_name:
+                    raise HTTPException(status_code=500, detail="Chemin de fichier invalide")
+                zip_file.write(file_path, safe_name)
 
     zip_buffer.seek(0)
 

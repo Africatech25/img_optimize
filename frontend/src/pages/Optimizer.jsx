@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
 import ParamsPanel from '../components/ParamsPanel'
@@ -113,40 +113,60 @@ export default function Optimizer() {
       const data = await response.json()
       setJobId(data.job_id)
 
-      // Écouter les événements SSE
-      const eventSource = new EventSource(`${API_BASE}/api/progress/${data.job_id}`)
+      // Écouter les événements SSE avec reconnexion automatique
+      let retryCount = 0
+      const MAX_RETRIES = 3
+      const RETRY_DELAY = 2000
 
-      eventSource.onmessage = (event) => {
-        const message = JSON.parse(event.data)
+      const connectSSE = () => {
+        const eventSource = new EventSource(`${API_BASE}/api/progress/${data.job_id}`)
 
-        if (message.type === 'done') {
+        eventSource.onmessage = (event) => {
+          const message = JSON.parse(event.data)
+
+          if (message.type === 'done') {
+            eventSource.close()
+            retryCount = 0
+
+            // Traquer l'événement de succès
+            track('files_optimized', {
+              images: data.total_images,
+              videos: data.total_videos,
+              format: format,
+              codec: videoCodec,
+            })
+
+            // Récupérer les stats finales
+            fetch(`${API_BASE}/api/job/${data.job_id}`)
+              .then(res => res.json())
+              .then(jobData => {
+                setResult(jobData)
+                setIsProcessing(false)
+              })
+          } else {
+            retryCount = 0
+            setProgress(prev => [...prev, message])
+          }
+        }
+
+        eventSource.onerror = (error) => {
+          console.error('Erreur SSE:', error)
           eventSource.close()
 
-          // Traquer l'événement de succès
-          track('files_optimized', {
-            images: data.total_images,
-            videos: data.total_videos,
-            format: format,
-            codec: videoCodec,
-          })
-
-          // Récupérer les stats finales
-          fetch(`${API_BASE}/api/job/${data.job_id}`)
-            .then(res => res.json())
-            .then(jobData => {
-              setResult(jobData)
-              setIsProcessing(false)
-            })
-        } else {
-          setProgress(prev => [...prev, message])
+          if (retryCount < MAX_RETRIES) {
+            retryCount++
+            console.log(`Reconnexion SSE tentative ${retryCount}/${MAX_RETRIES}...`)
+            setTimeout(connectSSE, RETRY_DELAY * retryCount)
+          } else {
+            setIsProcessing(false)
+          }
         }
+
+        return eventSource
       }
 
-      eventSource.onerror = (error) => {
-        console.error('Erreur SSE:', error)
-        eventSource.close()
-        setIsProcessing(false)
-      }
+      const sseRef = connectSSE()
+      return () => sseRef.close()
 
     } catch (error) {
       console.error('Erreur:', error)
