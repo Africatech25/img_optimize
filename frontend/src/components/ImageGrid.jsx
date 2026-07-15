@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { X, Upload, FileImage, Film, Play } from 'lucide-react'
 
 const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/bmp', 'image/tiff']
@@ -46,6 +46,13 @@ export default function ImageGrid({ files, prefix, format, videoCodec, startNumb
     }
     return previewUrls[index]
   }
+
+  // Cleanup object URLs on unmount
+  useEffect(() => {
+    return () => {
+      Object.values(previewUrls).forEach(url => URL.revokeObjectURL(url))
+    }
+  }, [previewUrls])
 
   const handleFileSelect = (e) => {
     const newFiles = Array.from(e.target.files).filter(file =>

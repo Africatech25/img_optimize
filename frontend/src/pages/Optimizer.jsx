@@ -39,10 +39,21 @@ export default function Optimizer() {
   const [jobId, setJobId] = useState(null)
   const [progress, setProgress] = useState([])
   const [result, setResult] = useState(null)
+  const eventSourceRef = useRef(null)
 
   // Config from API
   const [formats, setFormats] = useState({})
   const [videoCodecs, setVideoCodecs] = useState({})
+
+  // Cleanup EventSource on unmount
+  useEffect(() => {
+    return () => {
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close()
+        eventSourceRef.current = null
+      }
+    }
+  }, [])
 
   // Compute file types
   const hasImages = files.some(f => !isVideoFile(f.name))
@@ -77,6 +88,12 @@ export default function Optimizer() {
 
   const handleOptimize = async () => {
     if (files.length === 0 || !prefix.trim()) return
+
+    // Fermer un EventSource precedent s'il existe
+    if (eventSourceRef.current) {
+      eventSourceRef.current.close()
+      eventSourceRef.current = null
+    }
 
     setIsProcessing(true)
     setProgress([])
@@ -120,12 +137,14 @@ export default function Optimizer() {
 
       const connectSSE = () => {
         const eventSource = new EventSource(`${API_BASE}/api/progress/${data.job_id}`)
+        eventSourceRef.current = eventSource
 
         eventSource.onmessage = (event) => {
           const message = JSON.parse(event.data)
 
           if (message.type === 'done') {
             eventSource.close()
+            eventSourceRef.current = null
             retryCount = 0
 
             // Traquer l'événement de succès
@@ -152,6 +171,7 @@ export default function Optimizer() {
         eventSource.onerror = (error) => {
           console.error('Erreur SSE:', error)
           eventSource.close()
+          eventSourceRef.current = null
 
           if (retryCount < MAX_RETRIES) {
             retryCount++
@@ -161,12 +181,9 @@ export default function Optimizer() {
             setIsProcessing(false)
           }
         }
-
-        return eventSource
       }
 
-      const sseRef = connectSSE()
-      return () => sseRef.close()
+      connectSSE()
 
     } catch (error) {
       console.error('Erreur:', error)
