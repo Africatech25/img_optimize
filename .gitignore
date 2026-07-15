@@ -28,6 +28,10 @@ temp_uploads/
 temp_outputs/
 *.log
 
+# Django
+db.sqlite3
+staticfiles/
+
 # Node
 node_modules/
 npm-debug.log*
