@@ -185,9 +185,28 @@ export default function Optimizer() {
     setIsProcessing(false)
   }
 
-  const handleDownload = () => {
-    if (jobId) {
-      window.location.href = `${API_BASE}/api/download/${jobId}`
+  const handleDownload = async () => {
+    if (!jobId) return
+    try {
+      const res = await fetch(`${API_BASE}/api/download/${jobId}`)
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.detail || 'Erreur de téléchargement')
+      }
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = result?.total_files === 1
+        ? `optimized-${jobId.slice(0, 8)}`
+        : `optimized-${jobId.slice(0, 8)}.zip`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+    } catch (e) {
+      console.error('Download error:', e)
+      alert(e.message || 'Impossible de télécharger le fichier')
     }
   }
 
