@@ -214,9 +214,11 @@ export default function Optimizer() {
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = result?.total_files === 1
-        ? `optimized-${jobId.slice(0, 8)}`
-        : `optimized-${jobId.slice(0, 8)}.zip`
+      // Pour un seul fichier, le backend fournit le nom via Content-Disposition
+      // Pour plusieurs fichiers, on force le nom ZIP
+      if (result?.total_files !== 1) {
+        a.download = `optimized-${jobId.slice(0, 8)}.zip`
+      }
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)
