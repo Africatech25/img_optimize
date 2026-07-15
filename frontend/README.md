@@ -1,16 +1,51 @@
-# React + Vite
+# ImgOpt - Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Interface utilisateur pour l'optimisation d'images et videos.
 
-Currently, two official plugins are available:
+## Stack
+- React 18
+- Vite 6
+- Tailwind CSS 3
+- React Router DOM
+- Lucide React (icones)
+- Vercel Analytics
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Developpement
 
-## React Compiler
+```bash
+npm install
+npm run dev
+```
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Build
 
-## Expanding the ESLint configuration
+```bash
+npm run build
+```
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+Le build est genere dans `dist/` (~230 KB gzip).
+
+## Variables d'environnement
+
+| Variable | Description |
+| :--- | :--- |
+| `VITE_API_URL` | URL du backend API (defaut : relatif) |
+
+## Structure
+
+```
+src/
+  components/     # Composants UI reutilisables
+    DropZone.jsx      # Zone de depot fichiers
+    ImageGrid.jsx     # Grille d'apercu fichiers
+    ParamsPanel.jsx   # Panneau de parametres
+    ProgressLog.jsx   # Log de progression SSE
+    ResultCard.jsx    # Carte de resultat
+    Navbar.jsx        # Barre de navigation
+  pages/
+    Landing.jsx       # Page d'accueil
+    Optimizer.jsx     # Page principale d'optimisation
+    Security.jsx      # Page securite
+  App.jsx
+  main.jsx
+```

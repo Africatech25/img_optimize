@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false)
@@ -15,9 +15,11 @@ export default function Navbar() {
   }, [])
 
   // Close mobile menu on route change
+  const closeMenu = useCallback(() => setIsOpen(false), [])
+
   useEffect(() => {
-    setIsOpen(false)
-  }, [location])
+    closeMenu()
+  }, [location, closeMenu])
 
   const menuLinks = [
     { label: 'Accueil', path: '/' },

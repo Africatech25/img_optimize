@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
 import ParamsPanel from '../components/ParamsPanel'
@@ -6,32 +6,58 @@ import DropZone from '../components/DropZone'
 import ImageGrid from '../components/ImageGrid'
 import ProgressLog from '../components/ProgressLog'
 import ResultCard from '../components/ResultCard'
-import PDFRepair from '../components/PDFRepair'
 
 import { track } from '@vercel/analytics'
 
+const VIDEO_EXTENSIONS = new Set(['.mp4', '.webm', '.avi', '.mov', '.mkv', '.flv', '.wmv', '.m4v', '.3gp'])
+
+function isVideoFile(filename) {
+  const ext = filename.toLowerCase().split('.').pop()
+  return VIDEO_EXTENSIONS.has(`.${ext}`)
+}
+
 export default function Optimizer() {
   const API_BASE = import.meta.env.VITE_API_URL || '';
-  const [activeTab, setActiveTab] = useState('images') // 'images' ou 'pdf'
   const [files, setFiles] = useState([])
+
+  // Image params
   const [format, setFormat] = useState('webp')
   const [quality, setQuality] = useState(82)
+
+  // Video params
+  const [videoCodec, setVideoCodec] = useState('h264')
+  const [videoQuality, setVideoQuality] = useState(28)
+  const [resolution, setResolution] = useState('original')
+  const [maxFps, setMaxFps] = useState('')
+
+  // Common params
   const [prefix, setPrefix] = useState('')
   const [startNumber, setStartNumber] = useState(1)
-  const [smoothing, setSmoothing] = useState(0)
-  const [watermark, setWatermark] = useState({
-    enabled: false,
-    type: 'text',
-    text: '',
-    logo: null,
-    position: 'bottom-right',
-    opacity: 50
-  })
+
+  // UI state
   const [isProcessing, setIsProcessing] = useState(false)
   const [jobId, setJobId] = useState(null)
   const [progress, setProgress] = useState([])
   const [result, setResult] = useState(null)
+  const eventSourceRef = useRef(null)
+
+  // Config from API
   const [formats, setFormats] = useState({})
+  const [videoCodecs, setVideoCodecs] = useState({})
+
+  // Cleanup EventSource on unmount
+  useEffect(() => {
+    return () => {
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close()
+        eventSourceRef.current = null
+      }
+    }
+  }, [])
+
+  // Compute file types
+  const hasImages = files.some(f => !isVideoFile(f.name))
+  const hasVideos = files.some(f => isVideoFile(f.name))
 
   // Charger les formats disponibles au montage
   useEffect(() => {
@@ -39,20 +65,18 @@ export default function Optimizer() {
       .then(res => res.json())
       .then(data => {
         setFormats(data)
-        // Définir la qualité par défaut selon le format
-        if (data[format]) {
-          setQuality(data[format].default_quality)
-        }
       })
       .catch(err => console.error('Erreur chargement formats:', err))
-  }, [])
 
-  // Mettre à jour la qualité par défaut quand le format change
-  useEffect(() => {
-    if (formats[format]) {
-      setQuality(formats[format].default_quality)
-    }
-  }, [format, formats])
+    fetch(`${API_BASE}/api/video/formats`)
+      .then(res => res.json())
+      .then(data => {
+        setVideoCodecs(data)
+      })
+      .catch(err => console.error('Erreur chargement codecs vidéo:', err))
+  }, [API_BASE])
+
+  // Les qualités par défaut sont définies dans les useState initiaux
 
   const handleFilesAdded = (newFiles) => {
     setFiles(prev => [...prev, ...newFiles])
@@ -62,10 +86,14 @@ export default function Optimizer() {
     setFiles(prev => prev.filter((_, i) => i !== index))
   }
 
-  const handleProcess = async (type = 'both') => {
-    // Pour le lissage uniquement, on n'a pas forcément besoin du préfixe SEO
-    const isSmoothingOnly = type === 'smoothing'
-    if (files.length === 0 || (!isSmoothingOnly && !prefix.trim())) return
+  const handleOptimize = async () => {
+    if (files.length === 0 || !prefix.trim()) return
+
+    // Fermer un EventSource precedent s'il existe
+    if (eventSourceRef.current) {
+      eventSourceRef.current.close()
+      eventSourceRef.current = null
+    }
 
     setIsProcessing(true)
     setProgress([])
@@ -76,31 +104,15 @@ export default function Optimizer() {
     files.forEach(file => {
       formData.append('files', file)
     })
-    
-    // Si type 'smoothing', on utilise le nom d'origine ou un préfixe par défaut si vide
-    const finalPrefix = isSmoothingOnly && !prefix.trim() ? 'smoothed' : prefix
-
-    let finalQuality = quality;
-    if (type === 'smoothing') finalQuality = 95;
-    if (type === 'signature_only') finalQuality = 100;
-
     formData.append('format', format)
-    formData.append('quality', finalQuality) 
-    formData.append('prefix', finalPrefix)
+    formData.append('quality', quality)
+    formData.append('prefix', prefix)
     formData.append('start_number', startNumber)
-    formData.append('smoothing', (type === 'general' || type === 'watermark' || type === 'signature_only') ? 0 : smoothing)
-
-    // Paramètres de Watermark
-    if (watermark.enabled) {
-      formData.append('watermark_enabled', 'true')
-      formData.append('watermark_type', watermark.type)
-      formData.append('watermark_text', watermark.text)
-      formData.append('watermark_position', watermark.position)
-      formData.append('watermark_opacity', watermark.opacity)
-      
-      if (watermark.type === 'image' && watermark.logo) {
-        formData.append('watermark_logo', watermark.logo)
-      }
+    formData.append('codec', videoCodec)
+    formData.append('video_quality', videoQuality)
+    formData.append('resolution', resolution)
+    if (maxFps) {
+      formData.append('max_fps', maxFps)
     }
 
     try {
@@ -112,51 +124,70 @@ export default function Optimizer() {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))
-        const errorMsg = errorData.detail || `Erreur ${response.status}: ${response.statusText}`
-        console.error('[API Error]', errorMsg)
-        throw new Error(errorMsg)
+        throw new Error(errorData.detail || 'Erreur lors du démarrage de l\'optimisation')
       }
 
       const data = await response.json()
       setJobId(data.job_id)
 
-      // Écouter les événements SSE
-      const eventSource = new EventSource(`${API_BASE}/api/progress/${data.job_id}`)
+      // Écouter les événements SSE avec reconnexion automatique
+      let retryCount = 0
+      const MAX_RETRIES = 3
+      const RETRY_DELAY = 2000
 
-      eventSource.onmessage = (event) => {
-        const message = JSON.parse(event.data)
+      const connectSSE = () => {
+        const eventSource = new EventSource(`${API_BASE}/api/progress/${data.job_id}`)
+        eventSourceRef.current = eventSource
 
-        if (message.type === 'done') {
-          eventSource.close()
-          
-          // Traquer l'événement de succès
-          track('images_optimized', { 
-            count: files.length, 
-            format: format,
-            quality: quality 
-          })
+        eventSource.onmessage = (event) => {
+          const message = JSON.parse(event.data)
 
-          // Récupérer les stats finales
-          fetch(`${API_BASE}/api/job/${data.job_id}`)
-            .then(res => res.json())
-            .then(jobData => {
-              setResult(jobData)
-              setIsProcessing(false)
+          if (message.type === 'done') {
+            eventSource.close()
+            eventSourceRef.current = null
+            retryCount = 0
+
+            // Traquer l'événement de succès
+            track('files_optimized', {
+              images: data.total_images,
+              videos: data.total_videos,
+              format: format,
+              codec: videoCodec,
             })
-        } else {
-          setProgress(prev => [...prev, message])
+
+            // Récupérer les stats finales
+            fetch(`${API_BASE}/api/job/${data.job_id}`)
+              .then(res => res.json())
+              .then(jobData => {
+                setResult(jobData)
+                setIsProcessing(false)
+              })
+          } else {
+            retryCount = 0
+            setProgress(prev => [...prev, message])
+          }
+        }
+
+        eventSource.onerror = (error) => {
+          console.error('Erreur SSE:', error)
+          eventSource.close()
+          eventSourceRef.current = null
+
+          if (retryCount < MAX_RETRIES) {
+            retryCount++
+            console.log(`Reconnexion SSE tentative ${retryCount}/${MAX_RETRIES}...`)
+            setTimeout(connectSSE, RETRY_DELAY * retryCount)
+          } else {
+            setIsProcessing(false)
+          }
         }
       }
 
-      eventSource.onerror = (error) => {
-        console.error('Erreur SSE:', error)
-        eventSource.close()
-        setIsProcessing(false)
-      }
+      connectSSE()
 
     } catch (error) {
       console.error('Erreur:', error)
-      alert(`Une erreur est survenue lors de l'optimisation :\n${error.message}`)
+      alert(error.message || 'Une erreur est survenue lors de l\'optimisation')
       setIsProcessing(false)
     }
   }
@@ -164,7 +195,6 @@ export default function Optimizer() {
   const handleReset = () => {
     setFiles([])
     setPrefix('')
-    setSmoothing(0)
     setStartNumber(1)
     setProgress([])
     setResult(null)
@@ -172,121 +202,115 @@ export default function Optimizer() {
     setIsProcessing(false)
   }
 
-  const handleDownload = () => {
-    if (jobId) {
-      window.location.href = `${API_BASE}/api/download/${jobId}`
+  const handleDownload = async () => {
+    if (!jobId) return
+    try {
+      const res = await fetch(`${API_BASE}/api/download/${jobId}`)
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.detail || 'Erreur de téléchargement')
+      }
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      // Pour un seul fichier, le backend fournit le nom via Content-Disposition
+      // Pour plusieurs fichiers, on force le nom ZIP
+      if (result?.total_files !== 1) {
+        a.download = `optimized-${jobId.slice(0, 8)}.zip`
+      }
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+    } catch (e) {
+      console.error('Download error:', e)
+      alert(e.message || 'Impossible de télécharger le fichier')
     }
   }
 
   const canOptimize = files.length > 0 && prefix.trim() !== '' && !isProcessing
-  const canSmooth = files.length > 0 && !isProcessing && smoothing > 0
 
   return (
     <div className="min-h-screen pt-28">
 
-      {/* Tab Navigation */}
-      <div className="sticky top-20 z-40 bg-slate-950/80 backdrop-blur-lg border-b border-slate-700/50">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="flex gap-0">
-            <button
-              onClick={() => setActiveTab('images')}
-              className={`px-6 py-4 font-semibold transition-all duration-300 border-b-2 ${
-                activeTab === 'images'
-                  ? 'border-violet-500 text-white'
-                  : 'border-transparent text-slate-400 hover:text-slate-300'
-              }`}
-            >
-              Optimisation d'images
-            </button>
-            <button
-              onClick={() => setActiveTab('pdf')}
-              className={`px-6 py-4 font-semibold transition-all duration-300 border-b-2 ${
-                activeTab === 'pdf'
-                  ? 'border-violet-500 text-white'
-                  : 'border-transparent text-slate-400 hover:text-slate-300'
-              }`}
-            >
-              Réparation PDF
-            </button>
-          </div>
-        </div>
-      </div>
-
       {/* Main Content */}
-      {activeTab === 'images' ? (
-        <div className="max-w-7xl mx-auto px-6 py-8">
-          {!result ? (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              {/* Left Column - Params */}
-              <div className="lg:col-span-1">
-                <ParamsPanel
-                  prefix={prefix}
-                  setPrefix={setPrefix}
-                  format={format}
-                  setFormat={setFormat}
-                  quality={quality}
-                  setQuality={setQuality}
-                  startNumber={startNumber}
-                  setStartNumber={setStartNumber}
-                  smoothing={smoothing}
-                  setSmoothing={setSmoothing}
-                  watermark={watermark}
-                  setWatermark={setWatermark}
-                  formats={formats}
-                  canOptimize={canOptimize}
-                  canSmooth={canSmooth}
-                  onProcess={handleProcess}
-                  isProcessing={isProcessing}
-                />
-              </div>
-
-              {/* Right Column - Images */}
-              <div className="lg:col-span-2">
-                {files.length === 0 ? (
-                  <DropZone onFilesAdded={handleFilesAdded} modeType="images" />
-                ) : (
-                  <ImageGrid
-                    files={files}
-                    prefix={prefix}
-                    format={format}
-                    startNumber={startNumber}
-                    onRemoveFile={handleRemoveFile}
-                    onFilesAdded={handleFilesAdded}
-                  />
-                )}
-
-                {/* Progress Log */}
-                {isProcessing && (
-                  <div className="mt-8">
-                    <ProgressLog progress={progress} totalImages={files.length} jobId={jobId} />
-                  </div>
-                )}
-              </div>
-            </div>
-          ) : (
-            /* Result View */
-            <div className="max-w-4xl mx-auto">
-              <ResultCard
-                result={result}
-                totalImages={files.length}
-                onDownload={handleDownload}
-                onReset={handleReset}
+      <div className="max-w-7xl mx-auto px-6 py-8">
+        {!result ? (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Left Column - Params */}
+            <div className="lg:col-span-1">
+              <ParamsPanel
+                format={format}
+                setFormat={setFormat}
+                quality={quality}
+                setQuality={setQuality}
+                formats={formats}
+                videoCodec={videoCodec}
+                setVideoCodec={setVideoCodec}
+                videoQuality={videoQuality}
+                setVideoQuality={setVideoQuality}
+                videoCodecs={videoCodecs}
+                resolution={resolution}
+                setResolution={setResolution}
+                maxFps={maxFps}
+                setMaxFps={setMaxFps}
+                prefix={prefix}
+                setPrefix={setPrefix}
+                startNumber={startNumber}
+                setStartNumber={setStartNumber}
+                canOptimize={canOptimize}
+                onOptimize={handleOptimize}
+                isProcessing={isProcessing}
+                hasImages={hasImages}
+                hasVideos={hasVideos}
               />
+            </div>
 
-              {/* Final Progress Log */}
-              {progress.length > 0 && (
+            {/* Right Column - Files */}
+            <div className="lg:col-span-2">
+              {files.length === 0 ? (
+                <DropZone onFilesAdded={handleFilesAdded} />
+              ) : (
+                <ImageGrid
+                  files={files}
+                  prefix={prefix}
+                  format={format}
+                  videoCodec={videoCodec}
+                  startNumber={startNumber}
+                  onRemoveFile={handleRemoveFile}
+                  onFilesAdded={handleFilesAdded}
+                />
+              )}
+
+              {/* Progress Log */}
+              {isProcessing && (
                 <div className="mt-8">
-                  <h3 className="text-xl font-semibold text-white mb-4">Détails du traitement</h3>
                   <ProgressLog progress={progress} totalImages={files.length} jobId={jobId} />
                 </div>
               )}
             </div>
-          )}
-        </div>
-      ) : (
-        /* PDF Repair Tab */
-        <PDFRepair />
-      )}
+          </div>
+        ) : (
+          /* Result View */
+          <div className="max-w-4xl mx-auto">
+            <ResultCard
+              result={result}
+              totalImages={files.length}
+              onDownload={handleDownload}
+              onReset={handleReset}
+            />
+
+            {/* Final Progress Log */}
+            {progress.length > 0 && (
+              <div className="mt-8">
+                <h3 className="text-xl font-semibold text-white mb-4">Détails du traitement</h3>
+                <ProgressLog progress={progress} totalImages={files.length} jobId={jobId} />
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   )
 }

@@ -17,13 +17,13 @@ export default function Landing() {
           <h1 className="text-4xl md:text-5xl lg:text-8xl font-bold mb-8 leading-[1.1] tracking-tight max-w-[15ch] mx-auto">
             <span className="text-gradient">Optimisez vos images</span>
             <br />
-            <span className="text-white">en un clin d'œil</span>
+            <span className="text-white">et vidéos</span>
           </h1>
 
           {/* Subtitle */}
           <p className="text-lg lg:text-xl text-slate-400 mb-12 max-w-2xl mx-auto font-light leading-relaxed">
-            Comprimez, signez, nettoyez vos images en un seul endroit. La solution complète pour un branding cohérent,
-            un SEO performant et une gestion d'assets fluide.
+            Réduisez significativement le poids de vos fichiers images et vidéos sans sacrifier la qualité.
+            H.264, H.265, VP9, AV1, WebP, AVIF — la solution ultime pour un SEO performant.
           </p>
 
           {/* CTA Group */}
@@ -72,7 +72,7 @@ export default function Landing() {
             <span className="text-xs font-bold text-violet-500 uppercase tracking-[0.3em] mb-4 inline-block">Notre Savoir-Faire</span>
             <h2 className="text-4xl lg:text-6xl font-bold mb-6 text-white leading-tight">
               La solution complète <br className="hidden md:block" />
-              pour vos images
+              pour images et vidéos
             </h2>
           </div>
 
@@ -87,32 +87,32 @@ export default function Landing() {
               {
                 icon: 'fa-chart-line',
                 title: 'Optimisation SEO',
-                desc: 'Des images légères et bien nommées pour grimper au sommet des résultats de recherche Google.',
+                desc: 'Des assets légers et bien nommés pour grimper au sommet des résultats de recherche Google.',
                 color: 'bg-indigo-600'
               },
               {
                 icon: 'fa-shield-halved',
                 title: 'Sécurité Maximale',
-                desc: 'Traitement 100% local dans votre navigateur. Vos données restent privées, toujours.',
+                desc: 'Traitement 100% sur nos serveurs. Vos données restent privées, toujours.',
                 color: 'bg-cyan-600'
               },
               {
                 icon: 'fa-wand-magic-sparkles',
                 title: 'Formats Modernes',
-                desc: 'Conversion instantanée vers le WebP et l\'AVIF pour une performance web de nouvelle génération.',
+                desc: 'Conversion vers WebP, AVIF pour les images. H.264, H.265, VP9, AV1 pour les vidéos.',
                 color: 'bg-fuchsia-600'
               },
               {
-                icon: 'fa-pen-nib',
-                title: 'Branding & Signature',
-                desc: 'Apposez un logo ou du texte sur vos images automatiquement. Protégez votre création et continuez à optimiser.',
+                icon: 'fa-film',
+                title: 'Optimisation Vidéo',
+                desc: 'Compressez vos vidéos avec les codecs les plus efficaces. Contrôle du CRF, résolution et FPS.',
                 color: 'bg-rose-600'
               },
               {
                 icon: 'fa-layer-group',
                 title: 'Workflow Illimité',
-                desc: 'Aucun compte requis. Traitez des centaines d\'images sans file d\'attente ni aucune restriction.',
-                color: 'bg-orange-600'
+                desc: 'Aucun compte requis. Traitez des centaines de fichiers sans file d\'attente ni restriction.',
+                color: 'bg-emerald-600'
               }
             ].map((feature, idx) => (
               <div 
@@ -126,62 +126,6 @@ export default function Landing() {
                 <p className="text-slate-400 leading-relaxed font-light">
                   {feature.desc}
                 </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Testimonials Section */}
-      <section className="px-8 md:px-12 lg:px-20 py-20 lg:py-24 relative">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <span className="text-xs font-bold text-indigo-500 uppercase tracking-[0.3em] mb-4 inline-block px-3 py-1 bg-indigo-500/10 border border-indigo-500/20 rounded-full">Témoignages</span>
-            <h2 className="text-4xl lg:text-6xl font-bold mb-6 text-white leading-tight">
-              Ils nous font <br className="hidden md:block" />
-              confiance
-            </h2>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {[
-              {
-                name: "ESSEGNON Bienvenue",
-                role: "Développeur Web & Graphiste",
-                text: "Je viens d'essayer. C'est super. Thanks",
-                avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Bienvenue"
-              },
-              {
-                name: "Serge Maabe",
-                role: "UX/UI Designer de Funnel",
-                text: "Je peu faire l'audio pour donner mon avis. Le meilleure outils",
-                avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Serge"
-              },
-              {
-                name: "Nestor",
-                role: "Développeur & Entrepeur Web",
-                text: "Absolutely amazing",
-                avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Nestor"
-              }
-            ].map((testimonial, idx) => (
-              <div key={idx} className="glass-card p-8 rounded-[2rem] border border-white/5 hover:border-violet-500/30 transition-all duration-500 group">
-                <div className="flex items-center gap-4 mb-6">
-                  <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-white/10 group-hover:border-violet-500/50 transition-colors">
-                    <img src={testimonial.avatar} alt={testimonial.name} className="w-full h-full object-cover" />
-                  </div>
-                  <div>
-                    <h4 className="text-white font-bold">{testimonial.name}</h4>
-                    <p className="text-slate-500 text-sm">{testimonial.role}</p>
-                  </div>
-                </div>
-                <p className="text-slate-400 italic font-light leading-relaxed">
-                  "{testimonial.text}"
-                </p>
-                <div className="mt-6 flex gap-1 text-violet-500/60">
-                  {[1, 2, 3, 4, 5].map((s) => (
-                    <i key={s} className="fa-solid fa-star text-xs"></i>
-                  ))}
-                </div>
               </div>
             ))}
           </div>
@@ -239,6 +183,7 @@ export default function Landing() {
                   {[
                     { label: 'Asset Original (RAW)', size: '12.8 MB', progress: 100, color: 'bg-slate-800', icon: 'fa-file-image' },
                     { label: 'Optimisé WebP v2', size: '1.2 MB', progress: 12, color: 'bg-violet-500', saved: '90%', icon: 'fa-file-bolt' },
+                    { label: 'Vidéo H.265', size: '8.4 MB → 2.1 MB', progress: 25, color: 'bg-cyan-500', saved: '75%', icon: 'fa-file-video' },
                   ].map((row, idx) => (
                     <div key={idx} className="relative group/row">
                       <div className="flex justify-between mb-4 items-end">
@@ -321,7 +266,7 @@ export default function Landing() {
             </h2>
             
             <p className="text-slate-400 text-base font-light mb-8 max-w-md">
-              Ne laissez pas vos images ralentir vos ambitions. Passez à la vitesse supérieure dès aujourd'hui.
+              Ne laissez pas vos images ni vos vidéos ralentir vos ambitions. Passez à la vitesse supérieure dès aujourd'hui.
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto px-4 sm:px-0">
@@ -357,7 +302,7 @@ export default function Landing() {
               Img<span className="text-violet-500">Opt</span>
             </div>
             <p className="text-slate-500 max-w-xs">
-              L'outil d'optimisation d'images le plus rapide et le plus sécurisé, conçu pour les experts du web.
+              L'outil d'optimisation d'images et vidéos le plus rapide et le plus sécurisé, conçu pour les experts du web.
             </p>
           </div>
 
