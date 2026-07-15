@@ -7,24 +7,33 @@ import OptimizeVideos from './pages/OptimizeVideos'
 import SignImages from './pages/SignImages'
 import SmoothImages from './pages/SmoothImages'
 import Security from './pages/Security'
+import Login from './pages/Login'
+import Register from './pages/Register'
+import Account from './pages/Account'
+import { AuthProvider } from './context/AuthContext'
 
 import { Analytics } from '@vercel/analytics/react'
 
 function App() {
   return (
-    <BrowserRouter>
-      <Navbar />
-      <Routes>
-        <Route path="/" element={<Landing />} />
-        <Route path="/app" element={<Hub />} />
-        <Route path="/app/images" element={<OptimizeImages />} />
-        <Route path="/app/videos" element={<OptimizeVideos />} />
-        <Route path="/app/sign" element={<SignImages />} />
-        <Route path="/app/smooth" element={<SmoothImages />} />
-        <Route path="/security" element={<Security />} />
-      </Routes>
-      <Analytics />
-    </BrowserRouter>
+    <AuthProvider>
+      <BrowserRouter>
+        <Navbar />
+        <Routes>
+          <Route path="/" element={<Landing />} />
+          <Route path="/app" element={<Hub />} />
+          <Route path="/app/images" element={<OptimizeImages />} />
+          <Route path="/app/videos" element={<OptimizeVideos />} />
+          <Route path="/app/sign" element={<SignImages />} />
+          <Route path="/app/smooth" element={<SmoothImages />} />
+          <Route path="/security" element={<Security />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/account" element={<Account />} />
+        </Routes>
+        <Analytics />
+      </BrowserRouter>
+    </AuthProvider>
   )
 }
 

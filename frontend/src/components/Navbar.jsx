@@ -1,10 +1,19 @@
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useState, useEffect, useCallback } from 'react'
+import { useAuth } from '../context/AuthContext'
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
   const location = useLocation()
+  const navigate = useNavigate()
+  const { user, isAuthenticated, logout } = useAuth()
+
+  const handleLogout = async () => {
+    setIsOpen(false)
+    await logout()
+    navigate('/')
+  }
 
   useEffect(() => {
     const handleScroll = () => {
@@ -66,15 +75,41 @@ export default function Navbar() {
 
           {/* Right Action */}
           <div className="flex items-center gap-2 md:gap-4">
-            <Link
-              to="/app"
-              className="hidden sm:inline-flex items-center gap-2 px-5 md:px-6 py-1.5 md:py-2 bg-white text-black text-xs md:text-sm font-bold rounded-xl md:rounded-2xl hover:scale-105 active:scale-95 transition-all shadow-xl shadow-white/5"
-            >
-              Optimiser <span className="hidden lg:inline">mes images</span>
-              <i className="fa-solid fa-arrow-right text-[10px]"></i>
-            </Link>
-            
-            <button 
+            {isAuthenticated ? (
+              <>
+                <Link
+                  to="/account"
+                  className="hidden sm:inline-flex items-center gap-2 px-4 py-1.5 md:py-2 text-xs md:text-sm font-semibold text-slate-300 hover:text-white transition-colors"
+                >
+                  <i className="fa-solid fa-circle-user"></i>
+                  {user?.display_name || user?.email}
+                </Link>
+                <Link
+                  to="/app"
+                  className="hidden sm:inline-flex items-center gap-2 px-5 md:px-6 py-1.5 md:py-2 bg-white text-black text-xs md:text-sm font-bold rounded-xl md:rounded-2xl hover:scale-105 active:scale-95 transition-all shadow-xl shadow-white/5"
+                >
+                  Optimiser <span className="hidden lg:inline">mes images</span>
+                  <i className="fa-solid fa-arrow-right text-[10px]"></i>
+                </Link>
+              </>
+            ) : (
+              <>
+                <Link
+                  to="/login"
+                  className="hidden sm:inline-flex items-center px-4 py-1.5 md:py-2 text-xs md:text-sm font-semibold text-slate-300 hover:text-white transition-colors"
+                >
+                  Connexion
+                </Link>
+                <Link
+                  to="/register"
+                  className="hidden sm:inline-flex items-center gap-2 px-5 md:px-6 py-1.5 md:py-2 bg-white text-black text-xs md:text-sm font-bold rounded-xl md:rounded-2xl hover:scale-105 active:scale-95 transition-all shadow-xl shadow-white/5"
+                >
+                  Créer un compte
+                </Link>
+              </>
+            )}
+
+            <button
               onClick={() => setIsOpen(!isOpen)}
               className="md:hidden w-10 h-10 flex items-center justify-center text-white z-[120] relative"
             >
@@ -112,6 +147,41 @@ export default function Navbar() {
           >
             Commencer l'optimisation
           </Link>
+
+          {isAuthenticated ? (
+            <>
+              <Link
+                to="/account"
+                onClick={() => setIsOpen(false)}
+                className="text-lg font-semibold text-slate-300"
+              >
+                {user?.display_name || user?.email}
+              </Link>
+              <button
+                onClick={handleLogout}
+                className="w-full text-center py-4 border border-white/10 text-white font-semibold rounded-2xl"
+              >
+                Se déconnecter
+              </button>
+            </>
+          ) : (
+            <>
+              <Link
+                to="/login"
+                onClick={() => setIsOpen(false)}
+                className="w-full text-center py-4 border border-white/10 text-white font-semibold rounded-2xl"
+              >
+                Connexion
+              </Link>
+              <Link
+                to="/register"
+                onClick={() => setIsOpen(false)}
+                className="w-full text-center py-4 bg-white text-black font-bold rounded-2xl"
+              >
+                Créer un compte
+              </Link>
+            </>
+          )}
         </div>
       </div>
     </>
