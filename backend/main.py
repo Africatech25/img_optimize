@@ -34,7 +34,7 @@ from datetime import datetime, timedelta
 import os
 
 # Importation des moteurs d'optimisation
-from optimize_images import FORMAT_CONFIG, convert_image, format_size, check_avif_support
+from optimize_images import FORMAT_CONFIG, convert_image, format_size, check_avif_support, SUPPORTED_EXTENSIONS
 from video_processor import (
     CODEC_CONFIG, convert_video, check_ffmpeg_support,
     get_video_info, format_size as format_size_video,
@@ -143,6 +143,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["GET", "POST", "DELETE"],
     allow_headers=["Content-Type"],
+    expose_headers=["Content-Disposition"],
 )
 
 
@@ -254,11 +255,33 @@ async def get_video_formats():
     }
 
 
+VALID_MODES = {"optimize_image", "optimize_video", "sign", "smooth"}
+
+
+def resolve_max_quality_format(filename: str) -> tuple[str, int]:
+    """
+    Détermine le format et la qualité maximale (sans compression visible) pour
+    une image, en conservant au mieux son format d'origine. Utilisé par les
+    modes 'sign' et 'smooth', qui ne demandent pas de format/qualité à l'utilisateur.
+    """
+    ext = Path(filename).suffix.lower()
+    if ext in (".jpg", ".jpeg"):
+        fmt = "jpeg"
+    elif ext == ".webp":
+        fmt = "webp"
+    else:
+        # .png, .bmp, .tiff, .tif -> PNG (sans perte)
+        fmt = "png"
+    quality = FORMAT_CONFIG[fmt]["quality_range"][1]
+    return fmt, quality
+
+
 @app.post("/api/optimize")
 @limiter.limit("10/minute")
 async def start_optimization(
     request: Request,
     files: List[UploadFile] = File(...),
+    mode: str = Form("optimize_image"),
     format: str = Form("webp"),
     quality: int = Form(None),
     prefix: str = Form("image"),
@@ -267,15 +290,26 @@ async def start_optimization(
     video_quality: int = Form(None),
     resolution: Optional[str] = Form(None),
     max_fps: Optional[int] = Form(None),
+    smoothing: int = Form(0),
+    watermark_type: str = Form("text"),
+    watermark_text: str = Form(""),
+    watermark_logo: Optional[UploadFile] = File(None),
+    watermark_position: str = Form("bottom-right"),
+    watermark_opacity: str = Form("50"),
 ):
     """
-    Démarre l'optimisation d'images et/ou vidéos et retourne un job_id
+    Démarre une action (optimisation ou traitement) et retourne un job_id
     pour suivre la progression via SSE.
 
-    Le type de fichier est détecté automatiquement via l'extension.
-    - Images : utilise format/quality
-    - Vidéos : utilise codec/video_quality/resolution/max_fps
+    Le paramètre `mode` détermine l'action et les paramètres attendus :
+    - optimize_image : format + quality, images uniquement
+    - optimize_video : codec + video_quality + resolution + max_fps, vidéos uniquement
+    - sign : watermark_type/text/logo/position/opacity, images uniquement, qualité maximale
+    - smooth : smoothing, images uniquement, qualité maximale
     """
+    if mode not in VALID_MODES:
+        raise HTTPException(status_code=400, detail=f"Mode non supporté: {mode}")
+
     # Séparer les images et les vidéos
     image_files = []
     video_files = []
@@ -295,6 +329,12 @@ async def start_optimization(
     if not image_files and not video_files:
         raise HTTPException(status_code=400, detail="Aucun fichier valide fourni")
 
+    # Chaque mode est dédié à un seul type de fichier
+    if mode == "optimize_video" and image_files:
+        raise HTTPException(status_code=400, detail="Ce mode n'accepte que des vidéos.")
+    if mode in ("optimize_image", "sign", "smooth") and video_files:
+        raise HTTPException(status_code=400, detail="Ce mode n'accepte que des images.")
+
     # B5: Valider le prefixe (injection prevention)
     if not PREFIX_REGEX.match(prefix):
         raise HTTPException(
@@ -310,8 +350,14 @@ async def start_optimization(
             detail=f"Trop de jobs en cours ({active_jobs}/{MAX_CONCURRENT_JOBS}). Reessayez dans quelques secondes."
         )
 
-    # Valider les paramètres images si des images sont présentes
-    if image_files:
+    # Paramètres résolus selon le mode
+    img_format_val: Optional[str] = None   # None = qualité maximale, format auto par fichier
+    img_quality_val: Optional[int] = None
+    max_size_mo = 0
+    smoothing_val = 0
+    watermark_params = None
+
+    if mode == "optimize_image":
         if format not in FORMAT_CONFIG:
             raise HTTPException(status_code=400, detail=f"Format image non supporté: {format}")
         if format == "avif" and not check_avif_support():
@@ -327,8 +373,65 @@ async def start_optimization(
                 status_code=400,
                 detail=f"Qualité pour {format.upper()} doit être entre {q_min} et {q_max}"
             )
+        img_format_val = format
+        img_quality_val = img_quality
+        max_size_mo = 1.0
 
-    # Valider les paramètres vidéos si des vidéos sont présentes
+    elif mode == "smooth":
+        if not (1 <= smoothing <= 10):
+            raise HTTPException(
+                status_code=400,
+                detail="Le lissage doit être entre 1 et 10"
+            )
+        smoothing_val = smoothing
+
+    elif mode == "sign":
+        try:
+            watermark_opacity_val = int(watermark_opacity)
+        except (ValueError, TypeError):
+            watermark_opacity_val = 50
+        if not (0 <= watermark_opacity_val <= 100):
+            raise HTTPException(
+                status_code=400,
+                detail="L'opacité de la signature doit être entre 0 et 100"
+            )
+        if watermark_type == "text" and not watermark_text.strip():
+            raise HTTPException(status_code=400, detail="Le texte de la signature est requis")
+        if watermark_type == "image" and not watermark_logo:
+            raise HTTPException(status_code=400, detail="Un logo est requis pour ce type de signature")
+
+        watermark_params = {
+            "enabled": True,
+            "type": watermark_type,
+            "text": watermark_text,
+            "position": watermark_position,
+            "opacity": watermark_opacity_val,
+            "image_path": None,
+        }
+
+        # Sauvegarder temporairement le logo si fourni
+        if watermark_type == "image" and watermark_logo:
+            try:
+                logo_content = await watermark_logo.read(MAX_UPLOAD_SIZE_BYTES + 1)
+                if len(logo_content) > MAX_UPLOAD_SIZE_BYTES:
+                    raise HTTPException(
+                        status_code=413,
+                        detail=f"Logo trop volumineux (max {MAX_UPLOAD_SIZE_MB}MB)"
+                    )
+                logo_ext = Path(watermark_logo.filename).suffix.lower()
+                if logo_ext not in SUPPORTED_EXTENSIONS:
+                    raise HTTPException(status_code=400, detail="Format de logo non supporté")
+
+                logo_temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=logo_ext, dir=TEMP_DIR)
+                logo_temp_file.write(logo_content)
+                logo_temp_file.close()
+                watermark_params["image_path"] = logo_temp_file.name
+            except HTTPException:
+                raise
+            except Exception as e:
+                raise HTTPException(status_code=400, detail=f"Erreur lors de la lecture du logo: {str(e)}")
+
+    # Valider les paramètres vidéos si des vidéos sont présentes (mode optimize_video)
     if video_files:
         if codec not in CODEC_CONFIG:
             raise HTTPException(status_code=400, detail=f"Codec vidéo non supporté: {codec}")
@@ -377,15 +480,14 @@ async def start_optimization(
     jobs[job_id] = job
 
     # Préparer les paramètres pour le traitement
-    img_quality_val = img_quality if image_files else None
     vid_quality_val = vid_quality if video_files else None
 
     # Lancer le traitement en arrière-plan
     asyncio.create_task(
         process_mixed_async(
-            job, file_data, format, img_quality_val,
+            job, file_data, img_format_val, img_quality_val,
             codec, vid_quality_val, resolution, max_fps,
-            prefix, start_number
+            prefix, start_number, smoothing_val, watermark_params, max_size_mo
         )
     )
 
@@ -401,14 +503,17 @@ async def start_optimization(
 async def process_mixed_async(
     job: OptimizationJob,
     file_data: list,
-    img_format: str,
+    img_format: Optional[str],
     img_quality: Optional[int],
     video_codec: str,
     video_quality: Optional[int],
     resolution: Optional[str],
     max_fps: Optional[int],
     prefix: str,
-    start_number: int
+    start_number: int,
+    smoothing: int = 0,
+    watermark_params: dict = None,
+    max_size_mo: float = 0
 ):
     """
     Traite les images et vidéos de manière asynchrone.
@@ -439,8 +544,16 @@ async def process_mixed_async(
             )
         else:
             counter = await process_single_image(
-                job, file_info, img_format, img_quality, prefix, counter, idx
+                job, file_info, img_format, img_quality, prefix, counter, idx,
+                smoothing, watermark_params, max_size_mo
             )
+
+    # Nettoyage du logo temporaire de watermark si nécessaire
+    if watermark_params and watermark_params.get("image_path"):
+        try:
+            os.unlink(watermark_params["image_path"])
+        except OSError:
+            pass
 
     # Terminer le job
     job.status = "completed"
@@ -455,13 +568,21 @@ async def process_mixed_async(
 async def process_single_image(
     job: OptimizationJob,
     file_info: dict,
-    fmt: str,
-    quality: int,
+    fmt: Optional[str],
+    quality: Optional[int],
     prefix: str,
     counter: int,
-    idx: int
+    idx: int,
+    smoothing: int = 0,
+    watermark_params: dict = None,
+    max_size_mo: float = 0
 ) -> int:
     """Traite une seule image et retourne le compteur mis à jour"""
+    # fmt/quality non fournis (modes sign/smooth) : qualité maximale,
+    # format déterminé par fichier pour préserver le format d'origine.
+    if fmt is None:
+        fmt, quality = resolve_max_quality_format(file_info['filename'])
+
     config = FORMAT_CONFIG[fmt]
     ext = config["extension"]
     temp_input = None
@@ -478,8 +599,11 @@ async def process_single_image(
         output_filename = f"{prefix}-{counter:02d}{ext}"
         output_path = job.output_dir / output_filename
 
-        # Optimiser l'image avec limite OBLIGATOIRE de 1 Mo
-        before, after, status = convert_image(temp_input, output_path, fmt, quality, max_size_mo=1.0)
+        # Optimiser l'image (limite de taille, lissage et watermark selon le mode)
+        before, after, status = await asyncio.to_thread(
+            convert_image, temp_input, output_path, fmt, quality,
+            max_size_mo=max_size_mo, smoothing=smoothing, watermark_params=watermark_params
+        )
 
         gain_pct = (1 - after / before) * 100 if before > 0 else 0
 

@@ -24,6 +24,7 @@ export default function Navbar() {
   const menuLinks = [
     { label: 'Accueil', path: '/' },
     { label: 'Fonctionnalités', path: '/#features' },
+    { label: 'Témoignages', path: '/#testimonials' },
     { label: 'Sécurité', path: '/security' }
   ]
 

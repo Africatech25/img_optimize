@@ -1,5 +1,100 @@
 import { Link } from 'react-router-dom'
 
+const ACTIONS = [
+  {
+    to: '/app/images',
+    icon: 'fa-image',
+    title: 'Optimiser des images',
+    desc: 'Compressez et convertissez vos images en JPEG, WebP, AVIF ou PNG sans sacrifier la qualité.',
+    color: 'bg-cyan-600',
+  },
+  {
+    to: '/app/videos',
+    icon: 'fa-film',
+    title: 'Optimiser des vidéos',
+    desc: 'Compressez vos vidéos avec les codecs H.264, H.265, VP9 ou AV1. Contrôle du CRF, résolution et FPS.',
+    color: 'bg-violet-600',
+  },
+  {
+    to: '/app/sign',
+    icon: 'fa-pen-nib',
+    title: 'Signer des images',
+    desc: 'Ajoutez une signature texte ou un logo à vos images, à qualité maximale, sans compression.',
+    color: 'bg-blue-600',
+  },
+  {
+    to: '/app/smooth',
+    icon: 'fa-wand-magic-sparkles',
+    title: 'Lisser des images',
+    desc: 'Réduisez le grain de vos images avec un flou gaussien, à qualité maximale, sans compression.',
+    color: 'bg-emerald-600',
+  },
+]
+
+const SUPPORTED_FORMATS = [
+  { label: 'JPEG', kind: 'image' },
+  { label: 'WebP', kind: 'image' },
+  { label: 'AVIF', kind: 'image' },
+  { label: 'PNG', kind: 'image' },
+  { label: 'H.264', kind: 'video' },
+  { label: 'H.265', kind: 'video' },
+  { label: 'VP9', kind: 'video' },
+  { label: 'AV1', kind: 'video' },
+]
+
+const STATS = [
+  { value: '-70%', label: 'De poids en moins en moyenne sur vos fichiers' },
+  { value: '4', label: 'Formats image pris en charge (JPEG, WebP, AVIF, PNG)' },
+  { value: '4', label: 'Codecs vidéo pris en charge (H.264, H.265, VP9, AV1)' },
+  { value: '0€', label: 'Gratuit et illimité, sans création de compte' },
+]
+
+const STEPS = [
+  {
+    number: '01',
+    title: 'Choisissez une action',
+    desc: 'Optimiser, signer ou lisser : chaque action a son propre espace et ses réglages dédiés.',
+  },
+  {
+    number: '02',
+    title: 'Déposez vos fichiers',
+    desc: 'Glissez-déposez vos images ou vidéos, ou parcourez vos dossiers. Aucune limite de lot.',
+  },
+  {
+    number: '03',
+    title: 'Téléchargez le résultat',
+    desc: 'Récupérez vos fichiers traités individuellement ou en ZIP, en quelques secondes.',
+  },
+]
+
+const TESTIMONIALS = [
+  {
+    name: 'ESSEGNON Bienvenue',
+    role: 'Développeur Web & Graphiste',
+    text: "Je viens d'essayer. C'est super. Thanks",
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Bienvenue',
+  },
+  {
+    name: 'Serge Maabe',
+    role: 'UX/UI Designer de Funnel',
+    text: "Je peux faire l'audio pour donner mon avis. Le meilleur outil",
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Serge',
+  },
+  {
+    name: 'Nestor',
+    role: 'Développeur & Entrepreneur Web',
+    text: 'Absolutely amazing',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Nestor',
+  },
+]
+
+const FLOATING_BADGES = [
+  { label: 'Photographe', icon: 'fa-camera', position: 'top-6 left-0 lg:-left-8', delay: '' },
+  { label: 'Créateur de contenu', icon: 'fa-pen-nib', position: 'top-6 right-0 lg:-right-8', delay: 'animate-float-delayed' },
+  { label: 'Développeur web', icon: 'fa-code', position: 'bottom-6 left-0 lg:-left-10', delay: 'animate-float-delayed' },
+  { label: 'Agence digitale', icon: 'fa-building', position: 'bottom-6 right-0 lg:-right-10', delay: '' },
+]
+
 export default function Landing() {
   return (
     <div className="min-h-screen bg-[#050505] overflow-hidden">
@@ -47,6 +142,17 @@ export default function Landing() {
 
           {/* Hero Image Mockup */}
           <div className="mt-24 relative max-w-5xl mx-auto group animate-float">
+            {/* Floating role badges */}
+            {FLOATING_BADGES.map((badge) => (
+              <div
+                key={badge.label}
+                className={`hidden md:flex absolute z-20 items-center gap-2 px-4 py-2.5 glass-card border border-white/10 rounded-2xl shadow-xl backdrop-blur-xl bg-black/60 ${badge.position} ${badge.delay}`}
+              >
+                <i className={`fa-solid ${badge.icon} text-violet-400 text-sm`}></i>
+                <span className="text-xs font-semibold text-white whitespace-nowrap">{badge.label}</span>
+              </div>
+            ))}
+
             <div className="absolute -inset-1 bg-gradient-to-r from-violet-600 to-cyan-600 rounded-[2rem] blur opacity-20 group-hover:opacity-40 transition duration-1000"></div>
             <div className="relative glass-card gradient-border rounded-[2.5rem] overflow-hidden p-1 lg:p-2">
               <div className="bg-[#0A0A0A] rounded-[2rem] p-4 lg:p-8 aspect-video flex flex-col items-center justify-center border border-white/5">
@@ -65,108 +171,102 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* Features Section - 3 Column Grid */}
+      {/* Supported Formats Bar */}
+      <section className="px-6 py-10 relative border-y border-white/5 bg-white/[0.01]">
+        <div className="max-w-5xl mx-auto flex flex-col items-center gap-6">
+          <p className="text-xs text-slate-500 uppercase tracking-[0.3em] font-bold text-center">
+            Formats et codecs pris en charge
+          </p>
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            {SUPPORTED_FORMATS.map((fmt) => (
+              <span
+                key={fmt.label}
+                className={`px-4 py-2 text-xs font-bold rounded-full border ${
+                  fmt.kind === 'video'
+                    ? 'bg-violet-900/20 text-violet-300 border-violet-500/20'
+                    : 'bg-cyan-900/20 text-cyan-300 border-cyan-500/20'
+                }`}
+              >
+                {fmt.label}
+              </span>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Features Section - 4 Actions */}
       <section id="features" className="px-8 md:px-12 lg:px-20 py-20 lg:py-24 relative bg-white/[0.01]">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-20 animate-fade-in">
             <span className="text-xs font-bold text-violet-500 uppercase tracking-[0.3em] mb-4 inline-block">Notre Savoir-Faire</span>
             <h2 className="text-4xl lg:text-6xl font-bold mb-6 text-white leading-tight">
-              La solution complète <br className="hidden md:block" />
-              pour images et vidéos
+              Une action, <br className="hidden md:block" />
+              un espace dédié
+            </h2>
+            <p className="text-slate-400 max-w-xl mx-auto font-light">
+              Optimiser n'est pas signer, signer n'est pas lisser. Chaque action a ses propres réglages, pensés pour elle seule.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {ACTIONS.map((action) => (
+              <Link
+                key={action.to}
+                to={action.to}
+                className="bg-white/[0.03] border border-white/[0.05] p-10 rounded-[2rem] hover:bg-white/[0.05] transition-all duration-500 group flex flex-col items-start"
+              >
+                <div className={`w-16 h-16 ${action.color} rounded-full flex items-center justify-center mb-8 shadow-lg group-hover:scale-110 transition-transform`}>
+                  <i className={`fa-solid ${action.icon} text-2xl text-white`}></i>
+                </div>
+                <h3 className="text-2xl font-bold text-white mb-4">{action.title}</h3>
+                <p className="text-slate-400 leading-relaxed font-light mb-6">
+                  {action.desc}
+                </p>
+                <span className="inline-flex items-center gap-2 text-sm font-semibold text-slate-300 group-hover:gap-3 transition-all mt-auto">
+                  Commencer
+                  <i className="fa-solid fa-arrow-right text-xs"></i>
+                </span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Stats Section */}
+      <section className="px-8 md:px-12 lg:px-20 py-16 lg:py-20 relative">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-16">
+            <span className="text-xs font-bold text-cyan-500 uppercase tracking-[0.3em] mb-4 inline-block">En chiffres</span>
+            <h2 className="text-3xl lg:text-5xl font-bold text-white leading-tight">
+              Pourquoi choisir ImgOpt
             </h2>
           </div>
 
-          <div className="flex flex-wrap justify-center gap-8">
-            {[
-              {
-                icon: 'fa-bolt-lightning',
-                title: 'Compression Ultra-Rapide',
-                desc: 'Réduisez le poids de vos fichiers en quelques secondes sans compromis sur la netteté.',
-                color: 'bg-blue-600'
-              },
-              {
-                icon: 'fa-chart-line',
-                title: 'Optimisation SEO',
-                desc: 'Des assets légers et bien nommés pour grimper au sommet des résultats de recherche Google.',
-                color: 'bg-indigo-600'
-              },
-              {
-                icon: 'fa-shield-halved',
-                title: 'Sécurité Maximale',
-                desc: 'Traitement 100% sur nos serveurs. Vos données restent privées, toujours.',
-                color: 'bg-cyan-600'
-              },
-              {
-                icon: 'fa-wand-magic-sparkles',
-                title: 'Formats Modernes',
-                desc: 'Conversion vers WebP, AVIF pour les images. H.264, H.265, VP9, AV1 pour les vidéos.',
-                color: 'bg-fuchsia-600'
-              },
-              {
-                icon: 'fa-film',
-                title: 'Optimisation Vidéo',
-                desc: 'Compressez vos vidéos avec les codecs les plus efficaces. Contrôle du CRF, résolution et FPS.',
-                color: 'bg-rose-600'
-              },
-              {
-                icon: 'fa-layer-group',
-                title: 'Workflow Illimité',
-                desc: 'Aucun compte requis. Traitez des centaines de fichiers sans file d\'attente ni restriction.',
-                color: 'bg-emerald-600'
-              }
-            ].map((feature, idx) => (
-              <div 
-                key={idx} 
-                className="w-full md:w-[calc(50%-1rem)] lg:w-[calc(33.33%-2rem)] bg-white/[0.03] border border-white/[0.05] p-10 rounded-[2rem] hover:bg-white/[0.05] transition-all duration-500 group flex flex-col items-start"
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+            {STATS.map((stat) => (
+              <div
+                key={stat.label}
+                className="bg-white/[0.03] border border-white/[0.05] rounded-[2rem] p-8 text-center hover:border-violet-500/30 transition-colors"
               >
-                <div className={`w-16 h-16 ${feature.color} rounded-full flex items-center justify-center mb-8 shadow-lg ${feature.color.replace('bg-', 'shadow-')}/20 group-hover:scale-110 transition-transform`}>
-                  <i className={`fa-solid ${feature.icon} text-2xl text-white`}></i>
-                </div>
-                <h3 className="text-2xl font-bold text-white mb-4">{feature.title}</h3>
-                <p className="text-slate-400 leading-relaxed font-light">
-                  {feature.desc}
-                </p>
+                <p className="text-4xl lg:text-5xl font-bold text-gradient mb-3">{stat.value}</p>
+                <p className="text-sm text-slate-400 font-light leading-relaxed">{stat.label}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Info Split Section - Dashboard Visual */}
+      {/* 3 Steps Section - Dashboard Visual */}
       <section id="analytics" className="px-8 md:px-12 lg:px-20 py-20 lg:py-24 relative overflow-hidden">
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-col lg:flex-row items-center gap-24 lg:gap-32">
-            {/* Left Column: Text Content */}
-            <div className="lg:w-[45%] animate-slide-up">
-              <span className="text-xs font-bold text-cyan-500 uppercase tracking-[0.3em] mb-4 inline-block px-3 py-1 bg-cyan-500/10 border border-cyan-500/20 rounded-full">Analyse de Données</span>
-              <h2 className="text-4xl lg:text-7xl font-bold mb-8 text-white leading-tight">
-                Optimisation <br />
-                poussée.
-              </h2>
-              <p className="text-slate-400 text-xl font-light mb-12 leading-relaxed max-w-xl">
-                Suivez en temps réel le gain de performance de vos assets. 
-                Notre algorithme analyse chaque octet pour garantir un rendu parfait 
-                tout en divisant le poids de vos fichiers par quatre.
-              </p>
-              
-              <Link 
-                to="/app" 
-                className="group inline-flex items-center gap-3 px-8 py-4 bg-transparent border border-white/20 text-white font-bold rounded-full hover:bg-white/5 transition-all"
-              >
-                DÉCOUVRIR PLUS
-                <i className="fa-solid fa-arrow-right text-xs group-hover:translate-x-1 transition-transform"></i>
-              </Link>
-            </div>
-
-            {/* Right Column: Visual Mockup */}
-            <div className="lg:w-[55%] w-full relative pt-10">
+            {/* Left Column: Visual Mockup */}
+            <div className="lg:w-[55%] w-full relative pt-10 order-2 lg:order-1">
               <div className="absolute -inset-10 bg-violet-600/5 blur-[100px] rounded-full pointer-events-none"></div>
-              
-              {/* Main Dashboard Window */}
+
               <div className="relative glass-card premium-rounded border border-white/10 p-8 shadow-[0_50px_100px_rgba(0,0,0,0.5)] bg-[#0A0A0A] animate-float overflow-hidden">
                 <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-violet-500/20 to-transparent"></div>
-                
-                {/* Visual Header Mockup */}
+
                 <div className="flex items-center justify-between mb-10 pb-4 border-b border-white/5">
                   <div className="flex gap-2.5">
                     <div className="w-3 h-3 rounded-full bg-[#FF5F56] shadow-[0_0_10px_rgba(255,95,86,0.3)]"></div>
@@ -245,30 +345,98 @@ export default function Landing() {
                  </div>
               </div>
             </div>
+
+            {/* Right Column: Steps */}
+            <div className="lg:w-[45%] animate-slide-up order-1 lg:order-2">
+              <span className="text-xs font-bold text-cyan-500 uppercase tracking-[0.3em] mb-4 inline-block px-3 py-1 bg-cyan-500/10 border border-cyan-500/20 rounded-full">3 étapes</span>
+              <h2 className="text-4xl lg:text-6xl font-bold mb-10 text-white leading-tight">
+                Démarrez en <br />
+                3 étapes simples.
+              </h2>
+
+              <div className="space-y-8">
+                {STEPS.map((step) => (
+                  <div key={step.number} className="flex gap-5">
+                    <div className="shrink-0 w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-violet-400 font-bold">
+                      {step.number}
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold text-white mb-1">{step.title}</h3>
+                      <p className="text-slate-400 font-light leading-relaxed">{step.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <Link
+                to="/app"
+                className="group inline-flex items-center gap-3 mt-12 px-8 py-4 bg-transparent border border-white/20 text-white font-bold rounded-full hover:bg-white/5 transition-all"
+              >
+                COMMENCER MAINTENANT
+                <i className="fa-solid fa-arrow-right text-xs group-hover:translate-x-1 transition-transform"></i>
+              </Link>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Final CTA Area - Further Scaled Down */}
+      {/* Testimonials Section */}
+      <section id="testimonials" className="px-8 md:px-12 lg:px-20 py-20 lg:py-24 relative">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-16">
+            <span className="text-xs font-bold text-indigo-500 uppercase tracking-[0.3em] mb-4 inline-block px-3 py-1 bg-indigo-500/10 border border-indigo-500/20 rounded-full">Témoignages</span>
+            <h2 className="text-4xl lg:text-6xl font-bold mb-6 text-white leading-tight">
+              Ils nous font <br className="hidden md:block" />
+              confiance
+            </h2>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {TESTIMONIALS.map((testimonial, idx) => (
+              <div key={idx} className="glass-card p-8 rounded-[2rem] border border-white/5 hover:border-violet-500/30 transition-all duration-500 group">
+                <div className="flex items-center gap-4 mb-6">
+                  <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-white/10 group-hover:border-violet-500/50 transition-colors">
+                    <img src={testimonial.avatar} alt={testimonial.name} className="w-full h-full object-cover" />
+                  </div>
+                  <div>
+                    <h4 className="text-white font-bold">{testimonial.name}</h4>
+                    <p className="text-slate-500 text-sm">{testimonial.role}</p>
+                  </div>
+                </div>
+                <p className="text-slate-400 italic font-light leading-relaxed">
+                  "{testimonial.text}"
+                </p>
+                <div className="mt-6 flex gap-1 text-violet-500/60">
+                  {[1, 2, 3, 4, 5].map((s) => (
+                    <i key={s} className="fa-solid fa-star text-xs"></i>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Final CTA Area */}
       <section className="px-6 py-12 relative">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-[300px] bg-violet-600/5 blur-[100px] rounded-full pointer-events-none"></div>
         <div className="max-w-3xl mx-auto glass-card premium-rounded gradient-border p-8 lg:p-12 text-center relative overflow-hidden group shadow-[0_20px_60px_rgba(0,0,0,0.4)]">
           <div className="absolute inset-0 bg-gradient-to-br from-violet-600/10 via-transparent to-cyan-600/10 opacity-30"></div>
-          
+
           <div className="relative z-10 flex flex-col items-center">
             <div className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-500">
                <i className="fa-solid fa-sparkles text-lg text-violet-400"></i>
             </div>
-            
+
             <h2 className="text-2xl lg:text-4xl font-bold mb-4 text-white leading-[1.3] tracking-tight">
               Prêt à booster <br />
               <span className="text-gradient">votre impact ?</span>
             </h2>
-            
+
             <p className="text-slate-400 text-base font-light mb-8 max-w-md">
               Ne laissez pas vos images ni vos vidéos ralentir vos ambitions. Passez à la vitesse supérieure dès aujourd'hui.
             </p>
-            
+
             <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto px-4 sm:px-0">
               <Link
                 to="/app"
@@ -277,7 +445,7 @@ export default function Landing() {
                 <i className="fa-solid fa-bolt-lightning text-base group-hover:rotate-12 transition-transform"></i>
                 Lancer l'optimiseur
               </Link>
-              
+
               <Link
                 to="/security"
                 className="group relative inline-flex items-center justify-center gap-3 px-8 py-3 bg-transparent text-slate-300 font-bold rounded-full border border-white/10 hover:bg-white/5 hover:text-white transition-all w-full sm:w-auto"
@@ -308,14 +476,14 @@ export default function Landing() {
 
           <div className="flex gap-12">
             {[
-              { title: 'Produit', links: ['Fonctionnalités', 'Formats', 'Sécurité'] },
-              { title: 'Légal', links: ['Confidentialité', 'Mentions'] }
+              { title: 'Produit', links: [{ label: 'Fonctionnalités', href: '/#features' }, { label: 'Témoignages', href: '/#testimonials' }, { label: 'Sécurité', href: '/security' }] },
+              { title: 'Légal', links: [{ label: 'Confidentialité', href: '#' }, { label: 'Mentions', href: '#' }] }
             ].map((col, idx) => (
               <div key={idx} className="space-y-4 text-left">
                 <h4 className="text-white font-bold uppercase tracking-widest text-xs">{col.title}</h4>
                 <ul className="space-y-2">
                   {col.links.map((lnk, i) => (
-                    <li key={i}><a href="#" className="text-slate-500 hover:text-white transition-colors text-sm">{lnk}</a></li>
+                    <li key={i}><a href={lnk.href} className="text-slate-500 hover:text-white transition-colors text-sm">{lnk.label}</a></li>
                   ))}
                 </ul>
               </div>
@@ -328,10 +496,10 @@ export default function Landing() {
               { id: 'github', icon: 'fa-github', url: '#' },
               { id: 'linkedin', icon: 'fa-linkedin-in', url: 'https://www.linkedin.com/in/maurice-codjo-6a82b82a3/' }
             ].map((social) => (
-              <a 
-                key={social.id} 
-                href={social.url} 
-                target="_blank" 
+              <a
+                key={social.id}
+                href={social.url}
+                target="_blank"
                 rel="noopener noreferrer"
                 className="w-12 h-12 glass-card rounded-full flex items-center justify-center hover:bg-white/10 transition-colors"
                 title={social.id}
