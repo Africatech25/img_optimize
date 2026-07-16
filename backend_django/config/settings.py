@@ -35,6 +35,11 @@ ALLOWED_HOSTS = [h.strip() for h in os.environ.get('DJANGO_ALLOWED_HOSTS', '*').
 # Application definition
 
 INSTALLED_APPS = [
+    # 'dashboard' avant 'django.contrib.admin' : nécessaire pour que notre
+    # template admin/index.html personnalisé (lien vers le dashboard) soit
+    # trouvé avant celui par défaut de Django (app_directories cherche dans
+    # l'ordre d'INSTALLED_APPS et s'arrête au premier match).
+    'dashboard',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -154,6 +159,8 @@ REST_FRAMEWORK = {
     ),
     'DEFAULT_THROTTLE_RATES': {
         'optimize': '10/minute',
+        'register': '5/hour',
+        'login': '10/minute',
     },
 }
 

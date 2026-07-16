@@ -29,6 +29,14 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_staff = models.BooleanField(default=False)
     date_joined = models.DateTimeField(auto_now_add=True)
 
+    # Attribution captée une seule fois, à l'inscription (cf. décision produit :
+    # pas de tracking par requête, pas de conservation de l'IP brute).
+    signup_country = models.CharField(max_length=2, blank=True, help_text="Code pays ISO (ex: FR, US)")
+    signup_referrer_domain = models.CharField(max_length=255, blank=True, help_text="Domaine du referrer HTTP (ex: facebook.com)")
+    signup_utm_source = models.CharField(max_length=100, blank=True)
+    signup_utm_medium = models.CharField(max_length=100, blank=True)
+    signup_utm_campaign = models.CharField(max_length=100, blank=True)
+
     objects = UserManager()
 
     USERNAME_FIELD = "email"

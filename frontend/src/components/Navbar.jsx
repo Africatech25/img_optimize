@@ -77,6 +77,15 @@ export default function Navbar() {
           <div className="flex items-center gap-2 md:gap-4">
             {isAuthenticated ? (
               <>
+                {user?.is_staff && (
+                  <Link
+                    to="/admin"
+                    className="hidden sm:inline-flex items-center gap-2 px-4 py-1.5 md:py-2 text-xs md:text-sm font-semibold text-violet-300 hover:text-violet-200 transition-colors"
+                  >
+                    <i className="fa-solid fa-shield-halved"></i>
+                    Admin
+                  </Link>
+                )}
                 <Link
                   to="/account"
                   className="hidden sm:inline-flex items-center gap-2 px-4 py-1.5 md:py-2 text-xs md:text-sm font-semibold text-slate-300 hover:text-white transition-colors"
@@ -150,6 +159,15 @@ export default function Navbar() {
 
           {isAuthenticated ? (
             <>
+              {user?.is_staff && (
+                <Link
+                  to="/admin"
+                  onClick={() => setIsOpen(false)}
+                  className="text-lg font-semibold text-violet-300"
+                >
+                  Panneau admin
+                </Link>
+              )}
               <Link
                 to="/account"
                 onClick={() => setIsOpen(false)}

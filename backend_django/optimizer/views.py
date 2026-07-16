@@ -290,6 +290,8 @@ def start_optimization(request):
 
     job = OptimizationJob.objects.create(
         job_id=job_id,
+        mode=mode,
+        user=request.user if request.user.is_authenticated else None,
         total_files=len(file_data),
         total_images=len(image_files),
         total_videos=len(video_files),

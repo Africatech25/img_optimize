@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard — ImgOpt</title>
+    <style>
+        :root { color-scheme: dark; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background: #050505;
+            color: #e2e8f0;
+            margin: 0;
+            padding: 32px;
+        }
+        a { color: #a78bfa; }
+        h1 { font-size: 1.75rem; margin-bottom: 4px; }
+        .subtitle { color: #94a3b8; margin-bottom: 32px; }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 32px;
+        }
+        .card {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 20px;
+            padding: 20px;
+        }
+        .card .value { font-size: 2rem; font-weight: 700; color: #fff; }
+        .card .label { font-size: 0.8rem; color: #94a3b8; margin-top: 4px; }
+        section { margin-bottom: 40px; }
+        h2 { font-size: 1.1rem; color: #fff; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 8px; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+        th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        th { color: #94a3b8; font-weight: 600; text-transform: uppercase; font-size: 0.7rem; letter-spacing: 0.05em; }
+        .badge { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 0.75rem; font-weight: 600; }
+        .badge-completed { background: rgba(34,197,94,0.15); color: #4ade80; }
+        .badge-error { background: rgba(239,68,68,0.15); color: #f87171; }
+        .badge-processing { background: rgba(139,92,246,0.15); color: #a78bfa; }
+        .badge-pending { background: rgba(148,163,184,0.15); color: #94a3b8; }
+        .back-link { display: inline-block; margin-bottom: 24px; font-size: 0.85rem; }
+    </style>
+</head>
+<body>
+    <a class="back-link" href="/admin/">&larr; Retour à l'admin</a>
+    <h1>Dashboard ImgOpt</h1>
+    <p class="subtitle">Statistiques et analytics de la plateforme</p>
+
+    <section>
+        <h2>Utilisateurs</h2>
+        <div class="grid">
+            <div class="card">
+                <div class="value">{{ total_users }}</div>
+                <div class="label">Comptes créés</div>
+            </div>
+            <div class="card">
+                <div class="value">{{ new_users_7d }}</div>
+                <div class="label">Nouveaux (7 jours)</div>
+            </div>
+            <div class="card">
+                <div class="value">{{ new_users_30d }}</div>
+                <div class="label">Nouveaux (30 jours)</div>
+            </div>
+        </div>
+    </section>
+
+    <section>
+        <h2>Jobs de traitement</h2>
+        <div class="grid">
+            <div class="card">
+                <div class="value">{{ total_jobs }}</div>
+                <div class="label">Jobs au total</div>
+            </div>
+            <div class="card">
+                <div class="value">{{ jobs_7d }}</div>
+                <div class="label">Jobs (7 jours)</div>
+            </div>
+            <div class="card">
+                <div class="value">{{ total_files_processed }}</div>
+                <div class="label">Fichiers traités avec succès</div>
+            </div>
+            <div class="card">
+                <div class="value">{{ total_files_errors }}</div>
+                <div class="label">Erreurs de traitement</div>
+            </div>
+            <div class="card">
+                <div class="value">{{ reduction_percent }}%</div>
+                <div class="label">Réduction moyenne de poids</div>
+            </div>
+        </div>
+    </section>
+
+    <section>
+        <h2>Répartition par statut</h2>
+        <table>
+            <thead><tr><th>Statut</th><th>Nombre</th></tr></thead>
+            <tbody>
+                {% for status, count in status_counts.items %}
+                <tr>
+                    <td><span class="badge badge-{{ status }}">{{ status }}</span></td>
+                    <td>{{ count }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </section>
+
+    <section>
+        <h2>Répartition par action</h2>
+        <table>
+            <thead><tr><th>Mode</th><th>Nombre</th></tr></thead>
+            <tbody>
+                {% for mode, count in mode_counts.items %}
+                <tr><td>{{ mode }}</td><td>{{ count }}</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </section>
+
+    <section>
+        <h2>Jobs récents</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Job</th><th>Utilisateur</th><th>Mode</th><th>Statut</th><th>Fichiers</th><th>Créé le</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for job in recent_jobs %}
+                <tr>
+                    <td title="{{ job.job_id }}">{{ job.job_id|truncatechars:8 }}</td>
+                    <td>{{ job.user.email|default:"Anonyme" }}</td>
+                    <td>{{ job.mode }}</td>
+                    <td><span class="badge badge-{{ job.status }}">{{ job.status }}</span></td>
+                    <td>{{ job.processed_files }}/{{ job.total_files }}</td>
+                    <td>{{ job.created_at|date:"d/m/Y H:i" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </section>
+</body>
+</html>

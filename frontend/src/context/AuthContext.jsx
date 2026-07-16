@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react'
+import { getAttribution } from '../utils/attribution'
 
 const AuthContext = createContext(null)
 
@@ -29,9 +30,19 @@ function extractErrorMessage(data, fallback) {
 }
 
 export function AuthProvider({ children }) {
-  const [tokens, setTokens] = useState(getStoredTokens)
+  const [tokens, setTokensState] = useState(getStoredTokens)
   const [user, setUser] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
+
+  // Miroir synchrone de `tokens`, pour que authFetch lise toujours la
+  // dernière valeur même au sein d'appels concurrents (le state React est
+  // asynchrone, un closure capturé sur `tokens` pourrait être périmé).
+  const tokensRef = useRef(tokens)
+  const setTokens = useCallback((next) => {
+    tokensRef.current = next
+    setTokensState(next)
+    storeTokens(next)
+  }, [])
 
   const fetchMe = useCallback(async (accessToken) => {
     const res = await fetch(`${API_BASE}/api/auth/me`, {
@@ -53,10 +64,7 @@ export function AuthProvider({ children }) {
         const me = await fetchMe(tokens.access)
         if (!cancelled) setUser(me)
       } catch {
-        if (!cancelled) {
-          setTokens(null)
-          storeTokens(null)
-        }
+        if (!cancelled) setTokens(null)
       } finally {
         if (!cancelled) setIsLoading(false)
       }
@@ -77,9 +85,7 @@ export function AuthProvider({ children }) {
     if (!res.ok) {
       throw new Error(extractErrorMessage(data, 'Email ou mot de passe incorrect'))
     }
-    const newTokens = { access: data.access, refresh: data.refresh }
-    setTokens(newTokens)
-    storeTokens(newTokens)
+    setTokens({ access: data.access, refresh: data.refresh })
     setUser(data.user)
     return data.user
   }
@@ -88,41 +94,82 @@ export function AuthProvider({ children }) {
     const res = await fetch(`${API_BASE}/api/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password, display_name: displayName }),
+      body: JSON.stringify({ email, password, display_name: displayName, ...getAttribution() }),
     })
     const data = await res.json()
     if (!res.ok) {
       throw new Error(extractErrorMessage(data, 'Erreur lors de la création du compte'))
     }
-    const newTokens = { access: data.access, refresh: data.refresh }
-    setTokens(newTokens)
-    storeTokens(newTokens)
+    setTokens({ access: data.access, refresh: data.refresh })
     setUser(data.user)
     return data.user
   }
 
   const logout = async () => {
-    if (tokens?.refresh) {
+    const current = tokensRef.current
+    if (current?.refresh) {
       try {
         await fetch(`${API_BASE}/api/auth/logout`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${tokens.access}`,
+            Authorization: `Bearer ${current.access}`,
           },
-          body: JSON.stringify({ refresh: tokens.refresh }),
+          body: JSON.stringify({ refresh: current.refresh }),
         })
       } catch {
         // best effort : on déconnecte localement même si l'appel échoue
       }
     }
     setTokens(null)
-    storeTokens(null)
     setUser(null)
   }
 
+  // Rafraîchit l'access token à partir du refresh token stocké.
+  const refreshAccessToken = useCallback(async () => {
+    const current = tokensRef.current
+    if (!current?.refresh) return null
+    const res = await fetch(`${API_BASE}/api/auth/refresh`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh: current.refresh }),
+    })
+    if (!res.ok) return null
+    const data = await res.json()
+    const next = { access: data.access, refresh: data.refresh || current.refresh }
+    setTokens(next)
+    return next.access
+  }, [setTokens])
+
+  // fetch() authentifié : ajoute le header Authorization, et retente une
+  // fois après un rafraîchissement du token en cas de 401.
+  const authFetch = useCallback(async (path, options = {}) => {
+    const doFetch = (accessToken) => fetch(`${API_BASE}${path}`, {
+      ...options,
+      headers: {
+        ...(options.headers || {}),
+        ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+      },
+    })
+
+    let res = await doFetch(tokensRef.current?.access)
+    if (res.status === 401 && tokensRef.current?.refresh) {
+      const newAccess = await refreshAccessToken()
+      if (newAccess) {
+        res = await doFetch(newAccess)
+      } else {
+        setTokens(null)
+        setUser(null)
+      }
+    }
+    return res
+  }, [refreshAccessToken, setTokens])
+
   return (
-    <AuthContext.Provider value={{ user, isLoading, isAuthenticated: !!user, login, register, logout }}>
+    <AuthContext.Provider value={{
+      user, isLoading, isAuthenticated: !!user,
+      login, register, logout, authFetch,
+    }}>
       {children}
     </AuthContext.Provider>
   )

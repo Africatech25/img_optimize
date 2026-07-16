@@ -1,0 +1,9 @@
+{% extends "admin/index.html" %}
+{% block content %}
+<div style="margin-bottom: 20px;">
+    <a href="{% url 'admin:dashboard' %}" class="button" style="display:inline-block;padding:10px 16px;">
+        📊 Voir le dashboard (statistiques &amp; analytics)
+    </a>
+</div>
+{{ block.super }}
+{% endblock %}
