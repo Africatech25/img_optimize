@@ -100,6 +100,7 @@ const FLOATING_BADGES = [
 
 export default function Landing() {
   const [liveReviews, setLiveReviews] = useState(null)
+  const [reviewsLoaded, setReviewsLoaded] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -111,6 +112,8 @@ export default function Landing() {
         if (!cancelled && data.length > 0) setLiveReviews(data)
       } catch {
         // repli silencieux sur les témoignages statiques
+      } finally {
+        if (!cancelled) setReviewsLoaded(true)
       }
     }
     loadReviews()
@@ -415,7 +418,7 @@ export default function Landing() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {displayedTestimonials.map((testimonial, idx) => (
+            {reviewsLoaded && displayedTestimonials.map((testimonial, idx) => (
               <div key={idx} className="glass-card p-8 rounded-[2rem] border border-white/5 hover:border-violet-500/30 transition-all duration-500 group">
                 <div className="flex items-center gap-4 mb-6">
                   {testimonial.avatar ? (

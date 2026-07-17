@@ -42,7 +42,7 @@ export default function AdminReviews() {
         body: JSON.stringify({ status: newStatus }),
       })
       if (!res.ok) throw new Error('Mise à jour impossible')
-      setReviews((prev) => prev.filter((r) => r.id !== review.id))
+      await loadReviews()
     } catch (err) {
       alert(err.message)
     }
@@ -53,7 +53,7 @@ export default function AdminReviews() {
     try {
       const res = await authFetch(`/api/admin/reviews/${review.id}`, { method: 'DELETE' })
       if (!res.ok) throw new Error('Suppression impossible')
-      setReviews((prev) => prev.filter((r) => r.id !== review.id))
+      await loadReviews()
     } catch (err) {
       alert(err.message)
     }
