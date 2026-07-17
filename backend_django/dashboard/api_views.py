@@ -8,8 +8,9 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from optimizer.models import OptimizationJob
+from reviews.models import Review
 
-from .serializers import AdminJobDetailSerializer, AdminJobSerializer
+from .serializers import AdminJobDetailSerializer, AdminJobSerializer, AdminReviewSerializer
 from .services import compute_dashboard_stats
 
 
@@ -54,3 +55,21 @@ class AdminJobDetailView(generics.RetrieveDestroyAPIView):
         if output_dir.exists():
             shutil.rmtree(output_dir, ignore_errors=True)
         instance.delete()
+
+
+class AdminReviewListView(generics.ListAPIView):
+    permission_classes = [IsAdminUser]
+    serializer_class = AdminReviewSerializer
+
+    def get_queryset(self):
+        qs = Review.objects.select_related("user").order_by("-created_at")
+        status_filter = self.request.query_params.get("status")
+        if status_filter:
+            qs = qs.filter(status=status_filter)
+        return qs
+
+
+class AdminReviewDetailView(generics.RetrieveUpdateDestroyAPIView):
+    permission_classes = [IsAdminUser]
+    serializer_class = AdminReviewSerializer
+    queryset = Review.objects.select_related("user")

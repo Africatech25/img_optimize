@@ -10,4 +10,6 @@ urlpatterns = [
     path("jobs/<uuid:job_id>", api_views.AdminJobDetailView.as_view()),
     path("users", AdminUserListCreateView.as_view()),
     path("users/<int:pk>", AdminUserDetailView.as_view()),
+    path("reviews", api_views.AdminReviewListView.as_view()),
+    path("reviews/<int:pk>", api_views.AdminReviewDetailView.as_view()),
 ]
