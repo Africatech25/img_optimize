@@ -34,6 +34,7 @@ export default function Navbar() {
     { label: 'Accueil', path: '/' },
     { label: 'Fonctionnalités', path: '/#features' },
     { label: 'Témoignages', path: '/#testimonials' },
+    { label: 'Avis', path: '/avis' },
     { label: 'Sécurité', path: '/security' }
   ]
 
