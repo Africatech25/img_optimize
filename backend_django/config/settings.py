@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'optimizer',
     'accounts',
+    'reviews',
 ]
 
 AUTH_USER_MODEL = 'accounts.User'
