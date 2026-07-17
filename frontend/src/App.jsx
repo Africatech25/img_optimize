@@ -18,6 +18,7 @@ import AdminDashboard from './pages/admin/AdminDashboard'
 import AdminUsers from './pages/admin/AdminUsers'
 import AdminUserForm from './pages/admin/AdminUserForm'
 import AdminJobs from './pages/admin/AdminJobs'
+import AdminReviews from './pages/admin/AdminReviews'
 import { AuthProvider } from './context/AuthContext'
 import { captureAttribution } from './utils/attribution'
 
@@ -59,6 +60,7 @@ function App() {
             <Route path="users/new" element={<AdminUserForm />} />
             <Route path="users/:id" element={<AdminUserForm />} />
             <Route path="jobs" element={<AdminJobs />} />
+            <Route path="reviews" element={<AdminReviews />} />
           </Route>
         </Routes>
         <Analytics />
