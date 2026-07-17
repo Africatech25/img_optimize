@@ -1,4 +1,7 @@
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+
+const API_BASE = import.meta.env.VITE_API_URL || ''
 
 const ACTIONS = [
   {
@@ -96,6 +99,26 @@ const FLOATING_BADGES = [
 ]
 
 export default function Landing() {
+  const [liveReviews, setLiveReviews] = useState(null)
+
+  useEffect(() => {
+    let cancelled = false
+    async function loadReviews() {
+      try {
+        const res = await fetch(`${API_BASE}/api/reviews/public`)
+        if (!res.ok) return
+        const data = await res.json()
+        if (!cancelled && data.length > 0) setLiveReviews(data)
+      } catch {
+        // repli silencieux sur les témoignages statiques
+      }
+    }
+    loadReviews()
+    return () => { cancelled = true }
+  }, [])
+
+  const displayedTestimonials = liveReviews || TESTIMONIALS
+
   return (
     <div className="min-h-screen bg-[#050505] overflow-hidden">
       {/* Background Orbs */}
@@ -392,15 +415,21 @@ export default function Landing() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {TESTIMONIALS.map((testimonial, idx) => (
+            {displayedTestimonials.map((testimonial, idx) => (
               <div key={idx} className="glass-card p-8 rounded-[2rem] border border-white/5 hover:border-violet-500/30 transition-all duration-500 group">
                 <div className="flex items-center gap-4 mb-6">
-                  <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-white/10 group-hover:border-violet-500/50 transition-colors">
-                    <img src={testimonial.avatar} alt={testimonial.name} className="w-full h-full object-cover" />
-                  </div>
+                  {testimonial.avatar ? (
+                    <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-white/10 group-hover:border-violet-500/50 transition-colors">
+                      <img src={testimonial.avatar} alt={testimonial.name} className="w-full h-full object-cover" />
+                    </div>
+                  ) : (
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-violet-600 to-cyan-600 flex items-center justify-center text-white font-bold">
+                      {(testimonial.display_name || '?')[0].toUpperCase()}
+                    </div>
+                  )}
                   <div>
-                    <h4 className="text-white font-bold">{testimonial.name}</h4>
-                    <p className="text-slate-500 text-sm">{testimonial.role}</p>
+                    <h4 className="text-white font-bold">{testimonial.name || testimonial.display_name}</h4>
+                    {testimonial.role && <p className="text-slate-500 text-sm">{testimonial.role}</p>}
                   </div>
                 </div>
                 <p className="text-slate-400 italic font-light leading-relaxed">
@@ -408,7 +437,10 @@ export default function Landing() {
                 </p>
                 <div className="mt-6 flex gap-1 text-violet-500/60">
                   {[1, 2, 3, 4, 5].map((s) => (
-                    <i key={s} className="fa-solid fa-star text-xs"></i>
+                    <i
+                      key={s}
+                      className={`fa-solid fa-star text-xs ${testimonial.rating && s > testimonial.rating ? 'opacity-30' : ''}`}
+                    ></i>
                   ))}
                 </div>
               </div>
@@ -476,7 +508,7 @@ export default function Landing() {
 
           <div className="flex gap-12">
             {[
-              { title: 'Produit', links: [{ label: 'Fonctionnalités', href: '/#features' }, { label: 'Témoignages', href: '/#testimonials' }, { label: 'Sécurité', href: '/security' }] },
+              { title: 'Produit', links: [{ label: 'Fonctionnalités', href: '/#features' }, { label: 'Témoignages', href: '/#testimonials' }, { label: 'Avis', href: '/avis' }, { label: 'Sécurité', href: '/security' }] },
               { title: 'Légal', links: [{ label: 'Confidentialité', href: '#' }, { label: 'Mentions', href: '#' }] }
             ].map((col, idx) => (
               <div key={idx} className="space-y-4 text-left">
