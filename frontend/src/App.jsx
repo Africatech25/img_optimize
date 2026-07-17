@@ -8,6 +8,7 @@ import OptimizeVideos from './pages/OptimizeVideos'
 import SignImages from './pages/SignImages'
 import SmoothImages from './pages/SmoothImages'
 import Security from './pages/Security'
+import Reviews from './pages/Reviews'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import Account from './pages/Account'
@@ -47,6 +48,7 @@ function App() {
           <Route path="/app/sign" element={<SignImages />} />
           <Route path="/app/smooth" element={<SmoothImages />} />
           <Route path="/security" element={<Security />} />
+          <Route path="/avis" element={<Reviews />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/account" element={<Account />} />
