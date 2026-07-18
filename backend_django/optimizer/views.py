@@ -34,6 +34,13 @@ from .video_engine import (
     format_duration,
     get_video_info,
 )
+from .video_downloader import (
+    check_ytdlp_support,
+    get_supported_domains,
+    get_supported_platforms,
+    validate_url,
+    download_video,
+)
 
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".bmp", ".tiff", ".tif"}
 PREFIX_REGEX = re.compile(r"^[a-zA-Z0-9_-]{1,100}$")
@@ -70,8 +77,19 @@ def health_check(request):
         "status": "ok",
         "avif_available": check_avif_support(),
         "ffmpeg_available": check_ffmpeg_support(),
+        "ytdlp_available": check_ytdlp_support(),
         "image_formats": list(FORMAT_CONFIG.keys()),
         "video_codecs": list(CODEC_CONFIG.keys()),
+    })
+
+
+@api_view(["GET"])
+def get_download_platforms(request):
+    return Response({
+        "available": check_ytdlp_support(),
+        "platforms": get_supported_platforms(),
+        "domains": sorted(get_supported_domains().keys()),
+        "max_size_mb": settings.MAX_DOWNLOAD_SIZE_MB,
     })
 
 
@@ -318,6 +336,192 @@ def start_optimization(request):
     })
 
 
+# ==================== DEMARRAGE D'UN JOB DE TELECHARGEMENT ====================
+
+
+@api_view(["POST"])
+@throttle_classes([OptimizeThrottle])
+def start_download(request):
+    """
+    Télécharge une vidéo depuis une URL (YouTube, TikTok, Facebook, ...) puis
+    l'optimise via le pipeline vidéo existant. Retourne un job_id suivi en SSE.
+    """
+    url = (request.data.get("url") or "").strip()
+    try:
+        host = validate_url(url)
+    except ValueError as e:
+        return Response({"detail": str(e)}, status=400)
+
+    prefix = request.data.get("prefix", "video")
+    if not PREFIX_REGEX.match(prefix):
+        return Response(
+            {"detail": "Prefixe invalide. Utilisez uniquement lettres, chiffres, tirets ou underscores (1-100 car.)"},
+            status=400,
+        )
+
+    optimize = str(request.data.get("optimize", "true")).lower() not in ("false", "0", "")
+
+    if not check_ytdlp_support():
+        return Response(
+            {"detail": "Le téléchargement vidéo n'est pas disponible sur ce serveur (yt-dlp manquant)."},
+            status=503,
+        )
+
+    codec = request.data.get("codec", "h264")
+    video_quality = None
+    resolution = None
+    max_fps = None
+
+    if optimize:
+        if codec not in CODEC_CONFIG:
+            return Response({"detail": f"Codec vidéo non supporté: {codec}"}, status=400)
+        if not check_ffmpeg_support():
+            return Response(
+                {"detail": "FFmpeg n'est pas installé sur ce serveur. L'optimisation vidéo n'est pas disponible."},
+                status=400,
+            )
+
+        v_config = CODEC_CONFIG[codec]
+        vq_raw = request.data.get("video_quality")
+        video_quality = int(vq_raw) if vq_raw not in (None, "") else v_config["default_crf"]
+        v_min, v_max = v_config["crf_range"]
+        if not (v_min <= video_quality <= v_max):
+            return Response(
+                {"detail": f"Qualité vidéo (CRF) pour {codec.upper()} doit être entre {v_min} et {v_max}"},
+                status=400,
+            )
+
+        resolution = request.data.get("resolution")
+        max_fps_raw = request.data.get("max_fps")
+        max_fps = int(max_fps_raw) if max_fps_raw not in (None, "") else None
+
+    try:
+        start_number = int(request.data.get("start_number", 1))
+    except (TypeError, ValueError):
+        start_number = 1
+
+    cookies = request.data.get("cookies")
+
+    active_jobs = OptimizationJob.objects.filter(status__in=["pending", "processing"]).count()
+    if active_jobs >= settings.MAX_CONCURRENT_JOBS:
+        return Response(
+            {"detail": f"Trop de jobs en cours ({active_jobs}/{settings.MAX_CONCURRENT_JOBS}). Reessayez dans quelques secondes."},
+            status=429,
+        )
+
+    job_id = uuid.uuid4()
+    output_dir = settings.TEMP_DIR / str(job_id)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    job = OptimizationJob.objects.create(
+        job_id=job_id,
+        mode="optimize_video",
+        user=request.user if request.user.is_authenticated else None,
+        total_files=1,
+        total_videos=1,
+        output_dir=str(output_dir.resolve()),
+        stats={"optimized": optimize},
+    )
+
+    thread = threading.Thread(
+        target=_process_download,
+        args=(
+            str(job.job_id), url, host, optimize, codec, video_quality,
+            resolution, max_fps, prefix, start_number, cookies,
+        ),
+        daemon=True,
+    )
+    thread.start()
+
+    return Response({
+        "job_id": str(job.job_id),
+        "total_files": 1,
+        "total_videos": 1,
+        "status": "pending",
+    })
+
+
+def _process_download(
+    job_id, url, host, optimize, video_codec, video_quality,
+    resolution, max_fps, prefix, start_number, cookies,
+):
+    """Télécharge une vidéo depuis une URL puis, au choix, l'optimise (convert_video)
+    ou la conserve telle quelle."""
+    job = OptimizationJob.objects.get(job_id=job_id)
+    job.status = "processing"
+    job.save(update_fields=["status"])
+
+    job.add_progress({
+        "type": "started",
+        "message": f"Téléchargement depuis {host}...",
+        "timestamp": datetime.now().isoformat(),
+    })
+
+    # Dossier isolé pour le téléchargement brut (et le fichier cookies
+    # temporaire) : évite qu'un résidu (verrou Windows sur le fichier
+    # cookies, etc.) ne pollue job.output_dir et ne fasse basculer le
+    # téléchargement du résultat en ZIP au lieu du fichier unique attendu.
+    raw_dir = Path(tempfile.mkdtemp(prefix="dl_", dir=str(settings.TEMP_DIR)))
+    raw_path = None
+    try:
+        raw_path = download_video(url, raw_dir, cookies)
+
+        raw_size = raw_path.stat().st_size
+        if raw_size > settings.MAX_DOWNLOAD_SIZE_BYTES:
+            raise RuntimeError(
+                f"Vidéo téléchargée trop volumineuse "
+                f"({raw_size // (1024 * 1024)} MB). Maximum : {settings.MAX_DOWNLOAD_SIZE_MB} MB."
+            )
+
+        job.add_progress({
+            "type": "download_done",
+            "original_name": url,
+            "message": f"Téléchargement terminé ({format_size(raw_size)}). "
+                        + ("Optimisation..." if optimize else "Finalisation..."),
+            "timestamp": datetime.now().isoformat(),
+        })
+
+        if optimize:
+            _process_single_video(
+                job, {"filename": raw_path.name, "content": raw_path.read_bytes()},
+                video_codec, video_quality, resolution, max_fps, prefix, start_number, idx=1,
+            )
+        else:
+            _register_raw_download(job, raw_path, prefix, start_number, idx=1)
+    except Exception as e:
+        print(f"Erreur téléchargement {url}:\n  -> {e}\n  -> {traceback.format_exc()}")
+
+        job.refresh_from_db()
+        job.stats["errors"] = job.stats.get("errors", 0) + 1
+        job.save(update_fields=["stats"])
+
+        error_type = type(e).__name__
+        error_msg = str(e) or f"Exception {error_type}"
+        if error_type != "Exception":
+            error_msg = f"[{error_type}] {error_msg}"
+
+        job.add_progress({
+            "type": "video_error",
+            "original_name": url,
+            "error": error_msg,
+            "success": False,
+            "index": 1,
+            "timestamp": datetime.now().isoformat(),
+        })
+    finally:
+        shutil.rmtree(raw_dir, ignore_errors=True)
+
+        job.refresh_from_db()
+        job.status = "completed"
+        job.save(update_fields=["status"])
+        job.add_progress({
+            "type": "completed",
+            "message": f"Traitement terminé ! {job.stats.get('successful', 0)}/{job.total_files} fichier(s) traité(s)",
+            "timestamp": datetime.now().isoformat(),
+            "stats": job.to_dict()["stats"],
+        })
+
+
 # ==================== TRAITEMENT EN ARRIERE-PLAN (thread) ====================
 
 
@@ -481,6 +685,7 @@ def _process_single_video(job, file_info, codec, quality, resolution, max_fps, p
             "duration": format_duration(info["duration"]),
             "resolution": f"{info['width']}x{info['height']}",
             "codec": codec,
+            "optimized": True,
             "success": True,
             "index": idx,
             "timestamp": datetime.now().isoformat(),
@@ -513,6 +718,63 @@ def _process_single_video(job, file_info, codec, quality, resolution, max_fps, p
             temp_input.unlink()
 
     return counter
+
+
+def _register_raw_download(job, raw_path, prefix, counter, idx):
+    """Range le fichier téléchargé tel quel (sans optimisation) comme résultat du job."""
+    output_filename = f"{prefix}-{counter:02d}{raw_path.suffix.lower()}"
+    output_path = Path(job.output_dir) / output_filename
+
+    try:
+        size = raw_path.stat().st_size
+        try:
+            info = get_video_info(raw_path)
+            duration = format_duration(info["duration"])
+            video_resolution = f"{info['width']}x{info['height']}"
+        except Exception:
+            duration = None
+            video_resolution = None
+
+        shutil.move(str(raw_path), str(output_path))
+
+        job.refresh_from_db()
+        job.stats["total_before"] = job.stats.get("total_before", 0) + size
+        job.stats["total_after"] = job.stats.get("total_after", 0) + size
+        job.stats["successful"] = job.stats.get("successful", 0) + 1
+        job.save(update_fields=["stats"])
+
+        job.add_progress({
+            "type": "video_processed",
+            "original_name": raw_path.name,
+            "optimized_name": output_filename,
+            "before": size,
+            "after": size,
+            "gain_percent": 0,
+            "before_formatted": format_size(size),
+            "after_formatted": format_size(size),
+            "duration": duration,
+            "resolution": video_resolution,
+            "codec": None,
+            "optimized": False,
+            "success": True,
+            "index": idx,
+            "timestamp": datetime.now().isoformat(),
+        })
+    except Exception as e:
+        print(f"Erreur enregistrement téléchargement brut {raw_path}:\n  -> {e}\n  -> {traceback.format_exc()}")
+
+        job.refresh_from_db()
+        job.stats["errors"] = job.stats.get("errors", 0) + 1
+        job.save(update_fields=["stats"])
+
+        job.add_progress({
+            "type": "video_error",
+            "original_name": raw_path.name,
+            "error": str(e) or type(e).__name__,
+            "success": False,
+            "index": idx,
+            "timestamp": datetime.now().isoformat(),
+        })
 
 
 # ==================== SUIVI / TELECHARGEMENT ====================

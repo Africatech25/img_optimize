@@ -2,6 +2,10 @@ import { CheckCircle, TrendingDown, FileCheck, Download, Film, Image as ImageIco
 
 export default function ResultCard({ result, onDownload, onReset }) {
   const { stats } = result
+  // stats.optimized est undefined pour les pages d'optimisation classiques
+  // (toujours optimisées) et explicitement false pour un téléchargement par
+  // URL où l'utilisateur a désactivé l'optimisation.
+  const optimized = stats.optimized !== false
 
   const formatSize = (bytes) => {
     if (bytes >= 1_000_000) {
@@ -22,10 +26,13 @@ export default function ResultCard({ result, onDownload, onReset }) {
           <CheckCircle className="w-10 h-10 text-white" />
         </div>
         <h2 className="text-3xl font-bold text-white mb-2">
-          Optimisation terminée !
+          {optimized ? 'Optimisation terminée !' : 'Téléchargement terminé !'}
         </h2>
         <p className="text-slate-400">
-          {stats.successful} fichier{stats.successful > 1 ? 's' : ''} optimisé{stats.successful > 1 ? 's' : ''} avec succès
+          {optimized
+            ? <>{stats.successful} fichier{stats.successful > 1 ? 's' : ''} optimisé{stats.successful > 1 ? 's' : ''} avec succès</>
+            : <>{stats.successful} fichier{stats.successful > 1 ? 's' : ''} téléchargé{stats.successful > 1 ? 's' : ''} avec succès (sans optimisation)</>
+          }
           {hasImages && hasVideos && (
             <span className="block text-sm mt-1">
               ({stats.images} image{stats.images > 1 ? 's' : ''} + {stats.videos} vidéo{stats.videos > 1 ? 's' : ''})
@@ -35,14 +42,14 @@ export default function ResultCard({ result, onDownload, onReset }) {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className={`grid grid-cols-1 ${optimized ? 'md:grid-cols-3' : 'md:grid-cols-2'} gap-6`}>
         {/* Files Processed */}
         <div className="bg-slate-800/50 border border-slate-700 rounded-3xl p-6 text-center">
           <div className="w-12 h-12 mx-auto rounded-2xl bg-gradient-to-br from-violet-600 to-violet-800 flex items-center justify-center mb-3">
             <FileCheck className="w-6 h-6 text-white" />
           </div>
           <p className="text-3xl font-bold text-white mb-1">{stats.successful}</p>
-          <p className="text-sm text-slate-400">Fichiers optimisés</p>
+          <p className="text-sm text-slate-400">{optimized ? 'Fichiers optimisés' : 'Fichiers téléchargés'}</p>
           <div className="flex justify-center gap-2 mt-2">
             {hasImages && (
               <span className="px-2 py-0.5 bg-cyan-900/30 text-cyan-300 text-[10px] font-medium rounded-full flex items-center gap-1">
@@ -59,67 +66,70 @@ export default function ResultCard({ result, onDownload, onReset }) {
           </div>
         </div>
 
-        {/* Size Reduction */}
-        <div className="bg-slate-800/50 border border-slate-700 rounded-3xl p-6 text-center">
-          <div className="w-12 h-12 mx-auto rounded-2xl bg-gradient-to-br from-cyan-600 to-cyan-800 flex items-center justify-center mb-3">
-            <TrendingDown className="w-6 h-6 text-white" />
+        {optimized && (
+          <div className="bg-slate-800/50 border border-slate-700 rounded-3xl p-6 text-center">
+            <div className="w-12 h-12 mx-auto rounded-2xl bg-gradient-to-br from-cyan-600 to-cyan-800 flex items-center justify-center mb-3">
+              <TrendingDown className="w-6 h-6 text-white" />
+            </div>
+            <p className="text-3xl font-bold text-gradient mb-1">
+              {stats.reduction_percent}%
+            </p>
+            <p className="text-sm text-slate-400">Réduction moyenne</p>
           </div>
-          <p className="text-3xl font-bold text-gradient mb-1">
-            {stats.reduction_percent}%
-          </p>
-          <p className="text-sm text-slate-400">Réduction moyenne</p>
-        </div>
+        )}
 
-        {/* Total Saved */}
+        {/* Total Saved / Total Size */}
         <div className="bg-slate-800/50 border border-slate-700 rounded-3xl p-6 text-center">
           <div className="w-12 h-12 mx-auto rounded-2xl bg-gradient-to-br from-green-600 to-green-800 flex items-center justify-center mb-3">
             <CheckCircle className="w-6 h-6 text-white" />
           </div>
           <p className="text-3xl font-bold text-white mb-1">
-            {formatSize(stats.total_before - stats.total_after)}
+            {optimized ? formatSize(stats.total_before - stats.total_after) : formatSize(stats.total_after)}
           </p>
-          <p className="text-sm text-slate-400">Espace économisé</p>
+          <p className="text-sm text-slate-400">{optimized ? 'Espace économisé' : 'Taille du fichier'}</p>
         </div>
       </div>
 
-      {/* Size Comparison */}
-      <div className="bg-slate-800/50 border border-slate-700 rounded-3xl p-6 space-y-4">
-        <h3 className="text-lg font-semibold text-white">Comparaison des tailles</h3>
+      {/* Size Comparison (uniquement si une optimisation a réellement eu lieu) */}
+      {optimized && (
+        <div className="bg-slate-800/50 border border-slate-700 rounded-3xl p-6 space-y-4">
+          <h3 className="text-lg font-semibold text-white">Comparaison des tailles</h3>
 
-        <div className="space-y-3">
-          {/* Before */}
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-sm text-slate-400">Avant</span>
-              <span className="text-sm font-medium text-white">
-                {formatSize(stats.total_before)}
-              </span>
+          <div className="space-y-3">
+            {/* Before */}
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-sm text-slate-400">Avant</span>
+                <span className="text-sm font-medium text-white">
+                  {formatSize(stats.total_before)}
+                </span>
+              </div>
+              <div className="w-full h-3 bg-slate-700 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-red-500/50"
+                  style={{ width: '100%' }}
+                />
+              </div>
             </div>
-            <div className="w-full h-3 bg-slate-700 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-red-500/50"
-                style={{ width: '100%' }}
-              />
-            </div>
-          </div>
 
-          {/* After */}
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-sm text-slate-400">Après</span>
-              <span className="text-sm font-medium text-white">
-                {formatSize(stats.total_after)}
-              </span>
-            </div>
-            <div className="w-full h-3 bg-slate-700 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-gradient-to-r from-green-600 to-green-500"
-                style={{ width: `${stats.total_before > 0 ? (stats.total_after / stats.total_before) * 100 : 0}%` }}
-              />
+            {/* After */}
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-sm text-slate-400">Après</span>
+                <span className="text-sm font-medium text-white">
+                  {formatSize(stats.total_after)}
+                </span>
+              </div>
+              <div className="w-full h-3 bg-slate-700 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-green-600 to-green-500"
+                  style={{ width: `${stats.total_before > 0 ? (stats.total_after / stats.total_before) * 100 : 0}%` }}
+                />
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Errors if any */}
       {stats.errors > 0 && (
@@ -144,7 +154,7 @@ export default function ResultCard({ result, onDownload, onReset }) {
           onClick={onReset}
           className="flex-1 px-6 py-2.5 bg-slate-800 hover:bg-slate-700 text-white font-semibold rounded-2xl transition-all duration-300"
         >
-          Nouvelle optimisation
+          {optimized ? 'Nouvelle optimisation' : 'Nouveau téléchargement'}
         </button>
       </div>
     </div>

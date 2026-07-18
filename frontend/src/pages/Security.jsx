@@ -54,11 +54,12 @@ export default function Security() {
               <i className="fa-solid fa-eye-slash text-4xl text-pink-500"></i>
             </div>
             <div>
-              <h3 className="text-2xl font-bold text-white mb-2">Anonymat Total</h3>
+              <h3 className="text-2xl font-bold text-white mb-2">Compte Optionnel, Zero Pub</h3>
               <p className="text-slate-400 font-light text-lg">
-                Pas de compte, pas d'email, pas de cookies publicitaires. Nous utilisons <strong>Vercel Analytics</strong> pour
-                suivre le volume d'utilisation de maniere 100% anonyme et sans tracage individuel.
-                Votre identite reste votre propriete exclusive.
+                L'outil s'utilise sans creer de compte. Si vous choisissez de vous inscrire (pour retrouver votre historique
+                de jobs), votre email sert uniquement d'identifiant &mdash; aucune revente, aucun cookie publicitaire.
+                Nous utilisons <strong>Vercel Analytics</strong> pour suivre le volume d'utilisation de maniere 100% anonyme
+                et sans tracage individuel. Votre identite reste votre propriete exclusive.
               </p>
             </div>
           </div>
@@ -69,9 +70,10 @@ export default function Security() {
           <h2 className="text-3xl font-bold text-white mb-8 border-b border-white/5 pb-4">La Tech derriere ImgOpt</h2>
           <div className="space-y-6 text-slate-400">
             <p className="leading-relaxed">
-              Nous exploitons la puissance de <strong>FastAPI</strong> et de bibliotheques de traitement d'image de pointe (Pillow)
-              pour les images, et <strong>FFmpeg</strong> pour les videos. L'architecture cloud isole chaque job dans un
-              environnement ephemere.
+              Nous exploitons la puissance de <strong>Django REST Framework</strong> et de bibliotheques de traitement d'image
+              de pointe (Pillow) pour les images, et <strong>FFmpeg</strong> pour les videos. L'architecture cloud isole chaque
+              job dans un environnement ephemere, et l'authentification (facultative) repose sur des <strong>tokens JWT</strong>
+              plutot que sur des sessions persistantes.
             </p>
             <p className="leading-relaxed">
               Cette approche nous permet de supporter des formats de nouvelle generation comme le <strong>WebP</strong> et l'<strong>AVIF</strong>

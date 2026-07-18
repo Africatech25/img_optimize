@@ -19,6 +19,13 @@ const ACTIONS = [
     color: 'bg-violet-600',
   },
   {
+    to: '/app/download',
+    icon: 'fa-download',
+    title: 'Télécharger par URL',
+    desc: 'Récupérez une vidéo depuis YouTube, TikTok, Facebook, Instagram... et optimisez-la, ou gardez-la telle quelle, au choix.',
+    color: 'bg-teal-600',
+  },
+  {
     to: '/app/sign',
     icon: 'fa-pen-nib',
     title: 'Signer des images',
@@ -45,6 +52,16 @@ const SUPPORTED_FORMATS = [
   { label: 'AV1', kind: 'video' },
 ]
 
+const DOWNLOAD_PLATFORMS = [
+  { label: 'YouTube', icon: 'fa-youtube' },
+  { label: 'TikTok', icon: 'fa-tiktok' },
+  { label: 'Facebook', icon: 'fa-facebook' },
+  { label: 'Instagram', icon: 'fa-instagram' },
+  { label: 'X / Twitter', icon: 'fa-x-twitter' },
+  { label: 'Vimeo', icon: 'fa-vimeo' },
+  { label: 'Twitch', icon: 'fa-twitch' },
+]
+
 const STATS = [
   { value: '-70%', label: 'De poids en moins en moyenne sur vos fichiers' },
   { value: '4', label: 'Formats image pris en charge (JPEG, WebP, AVIF, PNG)' },
@@ -61,7 +78,7 @@ const STEPS = [
   {
     number: '02',
     title: 'Déposez vos fichiers',
-    desc: 'Glissez-déposez vos images ou vidéos, ou parcourez vos dossiers. Aucune limite de lot.',
+    desc: 'Glissez-déposez vos images ou vidéos, parcourez vos dossiers, ou collez une URL (YouTube, TikTok, Facebook...) pour les vidéos.',
   },
   {
     number: '03',
@@ -142,10 +159,19 @@ export default function Landing() {
           </h1>
 
           {/* Subtitle */}
-          <p className="text-lg lg:text-xl text-slate-400 mb-12 max-w-2xl mx-auto font-light leading-relaxed">
+          <p className="text-lg lg:text-xl text-slate-400 mb-6 max-w-2xl mx-auto font-light leading-relaxed">
             Réduisez significativement le poids de vos fichiers images et vidéos sans sacrifier la qualité.
             H.264, H.265, VP9, AV1, WebP, AVIF — la solution ultime pour un SEO performant.
           </p>
+
+          {/* New feature badge */}
+          <Link
+            to="/app/download"
+            className="inline-flex items-center gap-2 mb-12 px-4 py-2 bg-teal-500/10 border border-teal-500/20 rounded-full text-xs font-semibold text-teal-300 hover:bg-teal-500/20 transition-colors"
+          >
+            <span className="px-2 py-0.5 bg-teal-500 text-white rounded-full text-[10px] font-bold uppercase tracking-wide">Nouveau</span>
+            Téléchargez une vidéo par URL (YouTube, TikTok, Facebook...), optimisation au choix
+          </Link>
 
           {/* CTA Group */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-6 animate-slide-up px-4">
@@ -214,6 +240,21 @@ export default function Landing() {
                 }`}
               >
                 {fmt.label}
+              </span>
+            ))}
+          </div>
+
+          <p className="text-xs text-slate-500 uppercase tracking-[0.3em] font-bold text-center mt-4">
+            Téléchargement vidéo par URL depuis
+          </p>
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            {DOWNLOAD_PLATFORMS.map((platform) => (
+              <span
+                key={platform.label}
+                className="inline-flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-full border bg-white/[0.02] text-slate-300 border-white/10"
+              >
+                <i className={`fa-brands ${platform.icon}`}></i>
+                {platform.label}
               </span>
             ))}
           </div>

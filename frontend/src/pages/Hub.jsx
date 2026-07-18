@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { Image as ImageIcon, Film, PenTool, Sparkles, ArrowRight } from 'lucide-react'
+import { Image as ImageIcon, Film, Download, PenTool, Sparkles, ArrowRight } from 'lucide-react'
 
 const ACTIONS = [
   {
@@ -17,6 +17,14 @@ const ACTIONS = [
     description: 'Compressez et convertissez vos vidéos (H.264, H.265, VP9, AV1) sans perdre en qualité perçue.',
     accent: 'from-violet-600 to-violet-800',
     ring: 'hover:border-violet-500/50',
+  },
+  {
+    to: '/app/download',
+    icon: Download,
+    title: 'Télécharger par URL',
+    description: 'Récupérez une vidéo depuis YouTube, TikTok, Facebook... et optimisez-la, ou gardez-la telle quelle, au choix.',
+    accent: 'from-teal-600 to-teal-800',
+    ring: 'hover:border-teal-500/50',
   },
   {
     to: '/app/sign',

@@ -5,6 +5,7 @@ import Landing from './pages/Landing'
 import Hub from './pages/Hub'
 import OptimizeImages from './pages/OptimizeImages'
 import OptimizeVideos from './pages/OptimizeVideos'
+import DownloadVideo from './pages/DownloadVideo'
 import SignImages from './pages/SignImages'
 import SmoothImages from './pages/SmoothImages'
 import Security from './pages/Security'
@@ -46,6 +47,7 @@ function App() {
           <Route path="/app" element={<Hub />} />
           <Route path="/app/images" element={<OptimizeImages />} />
           <Route path="/app/videos" element={<OptimizeVideos />} />
+          <Route path="/app/download" element={<DownloadVideo />} />
           <Route path="/app/sign" element={<SignImages />} />
           <Route path="/app/smooth" element={<SmoothImages />} />
           <Route path="/security" element={<Security />} />

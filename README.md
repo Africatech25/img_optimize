@@ -25,6 +25,19 @@
 5. **Lancez l'optimisation** et suivez la progression en temps reel (SSE).
 6. **Telechargez** le fichier ZIP contenant tous vos assets optimises.
 
+### Telechargement depuis une URL (YouTube, TikTok, Facebook, ...)
+
+En plus de l'upload, vous pouvez coller l'URL d'une video (onglet « Depuis une URL »
+dans l'interface video). ImgOpt la telecharge puis l'optimise via le meme pipeline FFmpeg.
+
+- **Plateformes** : YouTube, TikTok, Facebook (fb.watch, videos privees via cookies),
+  Instagram, Vimeo, X/Twitter, Twitch.
+- **Cookies optionnels** : pour les videos Facebook privees / groupes / stories,
+  collez le contenu d'un fichier cookies Netscape.
+- **Limite** : 500 MB par video telechargee (`MAX_DOWNLOAD_SIZE_MB`).
+- **Legal** : le telechargement peut enfreindre les CGU des plateformes et le droit
+  d'auteur. A utiliser uniquement pour du contenu dont vous detenez les droits.
+
 ---
 
 ## Formats supportes
@@ -106,6 +119,8 @@ Le frontend sera accessible sur `http://localhost:5173`.
 | `GET` | `/api/health` | Health check (AVIF, FFmpeg status) |
 | `GET` | `/api/formats` | Formats image disponibles |
 | `GET` | `/api/video/formats` | Codecs video disponibles |
+| `GET` | `/api/download/platforms` | Plateformes de telechargement supportees |
+| `POST` | `/api/download` | Telecharger une video depuis une URL puis l'optimiser |
 | `POST` | `/api/optimize` | Envoyer images/videos pour traitement |
 | `GET` | `/api/progress/{id}` | SSE - progression en temps reel |
 | `GET` | `/api/job/{id}` | Statut d'un job |

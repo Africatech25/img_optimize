@@ -6,6 +6,8 @@ urlpatterns = [
     path("health", views.health_check),
     path("formats", views.get_formats),
     path("video/formats", views.get_video_formats),
+    path("download/platforms", views.get_download_platforms, name="download_platforms"),
+    path("download", views.start_download, name="start_download"),
     path("optimize", views.start_optimization),
     path("progress/<uuid:job_id>", views.stream_progress),
     path("job/<uuid:job_id>", views.get_job_status),
