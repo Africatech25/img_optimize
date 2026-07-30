@@ -13,6 +13,8 @@ services:
         value: 3.11.0
       - key: PORT
         generateValue: true
+      - key: CORS_ORIGINS
+        value: https://img-optimize-flame.vercel.app
       - key: MAX_DOWNLOAD_SIZE_MB
         value: 500
       - key: DOWNLOAD_ALLOWED_DOMAINS
