@@ -122,19 +122,32 @@ function LogEntry({ entry, onDownload }) {
     }
   }
 
-  // Video processed
+  // Video processed (ou téléchargée sans optimisation, entry.optimized === false)
   if (entry.type === 'video_processed') {
     if (entry.success) {
+      const wasOptimized = entry.optimized !== false
       return (
-        <div className="flex items-start gap-3 p-3 bg-violet-500/5 border border-violet-500/20 rounded-xl animate-fade-in group">
-          <Film className="w-5 h-5 text-violet-400 flex-shrink-0 mt-0.5" />
+        <div className={`flex items-start gap-3 p-3 rounded-xl animate-fade-in group ${wasOptimized ? 'bg-violet-500/5 border border-violet-500/20' : 'bg-slate-800/40 border border-slate-700'}`}>
+          {wasOptimized
+            ? <Film className="w-5 h-5 text-violet-400 flex-shrink-0 mt-0.5" />
+            : <Download className="w-5 h-5 text-teal-400 flex-shrink-0 mt-0.5" />
+          }
           <div className="flex-1 min-w-0">
             <p className="text-sm text-slate-300 truncate">
               <span className="font-medium">{entry.original_name}</span> → {entry.optimized_name}
             </p>
             <div className="flex items-center gap-4 mt-1 text-xs text-slate-500">
-              <span>{entry.before_formatted} → {entry.after_formatted}</span>
-              <span className="text-violet-400 font-medium">-{entry.gain_percent}%</span>
+              {wasOptimized ? (
+                <>
+                  <span>{entry.before_formatted} → {entry.after_formatted}</span>
+                  <span className="text-violet-400 font-medium">-{entry.gain_percent}%</span>
+                </>
+              ) : (
+                <>
+                  <span>{entry.after_formatted}</span>
+                  <span className="text-teal-400 font-medium">Sans optimisation</span>
+                </>
+              )}
               {entry.duration && <span className="text-slate-500">{entry.duration}</span>}
               {entry.resolution && <span className="text-slate-500">{entry.resolution}</span>}
               {entry.codec && <span className="text-slate-500 uppercase">{entry.codec}</span>}

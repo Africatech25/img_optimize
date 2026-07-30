@@ -13,6 +13,10 @@ services:
         value: 3.11.0
       - key: PORT
         generateValue: true
+      - key: MAX_DOWNLOAD_SIZE_MB
+        value: 500
+      - key: DOWNLOAD_ALLOWED_DOMAINS
+        value: youtube.com,youtu.be,tiktok.com,facebook.com,fb.watch,instagram.com,vimeo.com,twitter.com,x.com,twitch.tv
 
   # Service PDF Repair (réparation/analyse de PDF)
   - type: web
